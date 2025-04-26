@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title id="page-title"></title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .tab-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tab-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .tab-info {
+            flex: 1;
+            margin-right: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-info:hover {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .tab-title {
+            font-size: 16px;
+            color: #333333;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        .tab-url {
+            font-size: 14px;
+            color: #666666;
+            word-break: break-all;
+        }
+        .delete-btn {
+            padding: 8px 16px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .delete-btn:hover {
+            background-color: #ff0000;
+        }
+        .no-tabs {
+            text-align: center;
+            color: #666666;
+            padding: 40px;
+            font-size: 18px;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #999999;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="tab-list" class="tab-list"></div>
+    </div>
+    <script src="i18n.js"></script>
+    <script src="all_tabs.js"></script>
+</body>
+</html> 

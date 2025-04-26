@@ -1,0 +1,34 @@
+{
+  "name": {
+    "message": "CopyTabs",
+    "description": "Extension name"
+  },
+  "description": {
+    "message": "Copy and mark tabs easily",
+    "description": "Extension description"
+  },
+  "copyTabsTitle": {
+    "message": "Copy Tabs",
+    "description": "Title for copy tabs section"
+  },
+  "markTabsTitle": {
+    "message": "Mark Tabs",
+    "description": "Title for mark tabs section"
+  },
+  "copyThisTab": {
+    "message": "Copy This Tab",
+    "description": "Button to copy current tab"
+  },
+  "copyAllTabs": {
+    "message": "Copy All Tabs",
+    "description": "Button to copy all tabs"
+  },
+  "markThisTab": {
+    "message": "Mark This Tab",
+    "description": "Button to mark current tab"
+  },
+  "markAllTabs": {
+    "message": "Mark All Tabs",
+    "description": "Button to mark all tabs"
+  }
+} 

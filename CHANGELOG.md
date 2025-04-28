@@ -1,5 +1,13 @@
 # Changelog / 変更履歴
 
+## v.0.5.4
+
+### English
+- Fixed "This Tab" and "All Tabs" buttons not working
+
+### 日本語
+- 「このタブ」と「すべてのタブ」のボタンが効かない問題を修正
+
 ## v.0.5.3
 
 ### English

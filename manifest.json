@@ -2,13 +2,13 @@
   "manifest_version": 3,
   "name": "__MSG_name__",
   "description": "__MSG_description__",
-  "version": "0.5.2",
+  "version": "0.5.4",
   "default_locale": "en",
   "icons" : {
-    "128": "images/icon128-4.png"
+    "128": "images/icon128-6.png"
   },
   "action": {
-    "default_icon": "images/icon128-4.png",
+    "default_icon": "images/icon128-6.png",
     "default_title": "__MSG_name__",
     "default_popup": "popup.html"
   },

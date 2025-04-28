@@ -60,16 +60,19 @@ function count() {
 }
 
 function getActiveTab() {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        if (tabs[0]) {
-            let text = tabs[0].title + "\n" + tabs[0].url;
-            document.getElementById('input').value = text;
-            copy();
-            document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copied');
-            setTimeout(() => {
-                document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copyThisTab');
-            }, 2000);
-        }
+    return new Promise((resolve) => {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            if (tabs[0]) {
+                let text = tabs[0].title + "\n" + tabs[0].url;
+                document.getElementById('input').value = text;
+                copy();
+                document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copied');
+                setTimeout(() => {
+                    document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copyThisTab');
+                }, 2000);
+            }
+            resolve(tabs);
+        });
     });
 }
 
@@ -95,7 +98,7 @@ function copy() {
 }
 
 function markCurrentTab() {
-    getActiveTab().then(tabs => {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         if (tabs.length === 0) {
             document.getElementById('markCurrentTab').innerHTML = i18n.getString('noTabs');
             setTimeout(() => {
@@ -379,5 +382,137 @@ function openAllTabsWindow() {
         type: 'popup',
         width: 800,
         height: 600
+    });
+}
+
+function markAllTabs() {
+    chrome.tabs.query({}, function(tabs) {
+        if (tabs.length === 0) {
+            document.getElementById('markAllTabs').innerHTML = i18n.getString('noTabs');
+            setTimeout(() => {
+                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+            }, 2000);
+            return;
+        }
+        
+        chrome.storage.sync.get(['dataKeys'], function(result) {
+            const dataKeys = result.dataKeys || [];
+            
+            // Get all existing tabs
+            if (dataKeys.length > 0) {
+                chrome.storage.sync.get(dataKeys, function(tabsData) {
+                    const existingTabs = dataKeys.map(key => tabsData[key]);
+                    processNewTabs(tabs, existingTabs);
+                });
+            } else {
+                processNewTabs(tabs, []);
+            }
+        });
+    });
+}
+
+// Helper function to process new tabs
+function processNewTabs(chromeTabs, existingTabs) {
+    // Create a set of existing URLs for quick lookup
+    const existingUrls = new Set(existingTabs.map(tab => tab.url));
+    
+    let newTabs = [];
+    
+    // Add all tabs to marked tabs, skipping duplicates
+    chromeTabs.forEach(tab => {
+        if (!existingUrls.has(tab.url)) {
+            const tabData = {
+                id: Date.now() + Math.random(), // Ensure unique ID
+                title: tab.title,
+                url: tab.url,
+                timestamp: new Date().toISOString(),
+                locked: false
+            };
+            newTabs.push(tabData);
+            existingUrls.add(tab.url);
+        }
+    });
+    
+    const newTabsCount = newTabs.length;
+    
+    if (newTabsCount === 0) {
+        document.getElementById('markAllTabs').innerHTML = i18n.getString('noNewTabs');
+        setTimeout(() => {
+            chrome.tabs.query({}, function(tabs) {
+                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+            });
+        }, 2000);
+        return;
+    }
+    
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+        
+        // Create new keys and prepare update data
+        const updateData = {
+            dataKeys: [...dataKeys]
+        };
+        
+        newTabs.forEach((tab, index) => {
+            const newKey = `mark-${dataKeys.length + index + 1}`;
+            updateData.dataKeys.push(newKey);
+            updateData[newKey] = tab;
+        });
+        
+        // Check if we're approaching the storage limit
+        const dataSize = JSON.stringify(updateData).length;
+        
+        if (dataSize > 90000) { // Chrome sync storage limit is around 100KB
+            document.getElementById('markAllTabs').innerHTML = i18n.getString('quotaExceeded');
+            setTimeout(() => {
+                chrome.tabs.query({}, function(tabs) {
+                    document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                });
+            }, 2000);
+            return;
+        }
+        
+        // Use a callback to ensure the storage is updated
+        try {
+            chrome.storage.sync.set(updateData, function() {
+                if (chrome.runtime.lastError) {
+                    console.error("Error saving to storage:", chrome.runtime.lastError);
+                    
+                    // Display a user-friendly error message based on the error type
+                    let errorMessage = i18n.getString('error');
+                    if (chrome.runtime.lastError.message.includes("QUOTA_BYTES_PER_ITEM")) {
+                        errorMessage = i18n.getString('dataTooLarge');
+                    } else if (chrome.runtime.lastError.message.includes("QUOTA_BYTES")) {
+                        errorMessage = i18n.getString('quotaExceeded');
+                    }
+                    
+                    document.getElementById('markAllTabs').innerHTML = errorMessage;
+                    setTimeout(() => {
+                        chrome.tabs.query({}, function(tabs) {
+                            document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                        });
+                    }, 3000);
+                    return;
+                }
+                
+                // Force reload the marked tabs
+                loadMarkedTabs();
+                
+                document.getElementById('markAllTabs').innerHTML = newTabsCount + i18n.getString('markedTabs');
+                setTimeout(() => {
+                    chrome.tabs.query({}, function(tabs) {
+                        document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                    });
+                }, 2000);
+            });
+        } catch (error) {
+            console.error("Exception when saving to storage:", error);
+            document.getElementById('markAllTabs').innerHTML = i18n.getString('exception');
+            setTimeout(() => {
+                chrome.tabs.query({}, function(tabs) {
+                    document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                });
+            }, 2000);
+        }
     });
 }

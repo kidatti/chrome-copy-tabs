@@ -140,7 +140,8 @@ function addNewTab(chromeTab) {
         id: Date.now(),
         title: chromeTab.title,
         url: chromeTab.url,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        locked: false
     };
     
     chrome.storage.sync.get(['dataKeys'], function(result) {
@@ -236,7 +237,7 @@ function loadMarkedTabs() {
                             <div class="tab-title">${tab.title}</div>
                             <div class="tab-url">${tab.url}</div>
                         </div>
-                        <button class="delete-btn" data-id="${tab.id}">${i18n.getString('deleteButton')}</button>
+                        <button class="delete-btn" data-id="${tab.id}" ${tab.locked ? 'style="display: none;"' : ''}>${i18n.getString('deleteButton')}</button>
                     `;
                     
                     // Add click event to open the tab
@@ -262,16 +263,6 @@ function loadMarkedTabs() {
                 updateViewAllButton();
             });
         });
-    });
-}
-
-function openAllTabsWindow() {
-    // Create a new window to display all tabs
-    chrome.windows.create({
-        url: 'all_tabs.html',
-        type: 'popup',
-        width: 800,
-        height: 600
     });
 }
 
@@ -305,7 +296,6 @@ function deleteTab(tabId) {
     });
 }
 
-// Function to update the view all button
 function updateViewAllButton() {
     const viewAllButton = document.getElementById('viewAllTabs');
     
@@ -321,7 +311,6 @@ function updateViewAllButton() {
     });
 }
 
-// Add settings link to the popup
 function addSettingsLink() {
     // Check if the settings link already exists
     let settingsLink = document.querySelector('.settings-link');
@@ -383,133 +372,12 @@ function addStorageSizeInfo() {
     });
 }
 
-function markAllTabs() {
-    console.log("markAllTabs function called");
-    
-    // Use chrome.tabs.query with a more specific query
-    chrome.tabs.query({}, function(tabs) {
-        console.log("Tabs found:", tabs.length);
-        
-        if (tabs.length === 0) {
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('noTabs');
-            setTimeout(() => {
-                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
-            }, 2000);
-            return;
-        }
-        
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
-            
-            // Get all existing tabs
-            if (dataKeys.length > 0) {
-                chrome.storage.sync.get(dataKeys, function(tabsData) {
-                    const existingTabs = dataKeys.map(key => tabsData[key]);
-                    processNewTabs(tabs, existingTabs);
-                });
-            } else {
-                processNewTabs(tabs, []);
-            }
-        });
-    });
-}
-
-// Helper function to process new tabs
-function processNewTabs(chromeTabs, existingTabs) {
-    // Create a set of existing URLs for quick lookup
-    const existingUrls = new Set(existingTabs.map(tab => tab.url));
-    console.log("Existing URLs count:", existingUrls.size);
-    
-    let newTabs = [];
-    
-    // Add all tabs to marked tabs, skipping duplicates
-    chromeTabs.forEach(tab => {
-        if (!existingUrls.has(tab.url)) {
-            const tabData = {
-                id: Date.now() + Math.random(), // Ensure unique ID
-                title: tab.title,
-                url: tab.url,
-                timestamp: new Date().toISOString()
-            };
-            newTabs.push(tabData);
-            existingUrls.add(tab.url);
-        }
-    });
-    
-    const newTabsCount = newTabs.length;
-    console.log("New tabs to add:", newTabsCount);
-    
-    if (newTabsCount === 0) {
-        document.getElementById('markAllTabs').innerHTML = i18n.getString('noNewTabs');
-        setTimeout(() => {
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
-        }, 2000);
-        return;
-    }
-    
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        
-        // Create new keys and prepare update data
-        const updateData = {
-            dataKeys: [...dataKeys]
-        };
-        
-        newTabs.forEach((tab, index) => {
-            const newKey = `mark-${dataKeys.length + index + 1}`;
-            updateData.dataKeys.push(newKey);
-            updateData[newKey] = tab;
-        });
-        
-        // Check if we're approaching the storage limit
-        const dataSize = JSON.stringify(updateData).length;
-        console.log("Data size:", dataSize, "bytes");
-        
-        if (dataSize > 90000) { // Chrome sync storage limit is around 100KB
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('quotaExceeded');
-            setTimeout(() => {
-                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
-            }, 2000);
-            return;
-        }
-        
-        // Use a callback to ensure the storage is updated
-        try {
-            chrome.storage.sync.set(updateData, function() {
-                if (chrome.runtime.lastError) {
-                    console.error("Error saving to storage:", chrome.runtime.lastError);
-                    
-                    // Display a user-friendly error message based on the error type
-                    let errorMessage = i18n.getString('error');
-                    if (chrome.runtime.lastError.message.includes("QUOTA_BYTES_PER_ITEM")) {
-                        errorMessage = i18n.getString('dataTooLarge');
-                    } else if (chrome.runtime.lastError.message.includes("QUOTA_BYTES")) {
-                        errorMessage = i18n.getString('quotaExceeded');
-                    }
-                    
-                    document.getElementById('markAllTabs').innerHTML = errorMessage;
-                    setTimeout(() => {
-                        document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
-                    }, 3000);
-                    return;
-                }
-                
-                console.log("Storage updated successfully, new total:", updateData.dataKeys.length);
-                
-                // Force reload the marked tabs
-                loadMarkedTabs();
-                
-                document.getElementById('markAllTabs').innerHTML = newTabsCount + i18n.getString('markedTabs');
-                setTimeout(() => {
-                    document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
-                }, 2000);
-            });
-        } catch (error) {
-            console.error("Exception when saving to storage:", error);
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('exception');
-            setTimeout(() => {
-                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
-            }, 2000);
-        }
+function openAllTabsWindow() {
+    // Create a new window to display all tabs
+    chrome.windows.create({
+        url: 'all_tabs.html',
+        type: 'popup',
+        width: 800,
+        height: 600
     });
 }

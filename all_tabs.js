@@ -100,7 +100,11 @@ function loadAllMarkedTabs() {
                             <div class="tab-url">${tab.url}</div>
                             <div class="tab-date">${i18n.getString('markDateTime')}: ${formattedDate}</div>
                         </div>
-                        <button class="delete-btn" data-id="${tab.id}">${i18n.getString('deleteButton')}</button>
+                        <img class="lock-icon ${tab.locked ? 'locked' : ''}" 
+                             src="images/${tab.locked ? 'lock' : 'unlock'}.svg" 
+                             alt="${tab.locked ? 'Locked' : 'Unlocked'}"
+                             data-id="${tab.id}">
+                        <button class="delete-btn" data-id="${tab.id}" ${tab.locked ? 'style="display: none;"' : ''}>${i18n.getString('deleteButton')}</button>
                     `;
                     
                     // Add click event to open the tab
@@ -112,6 +116,13 @@ function loadAllMarkedTabs() {
                     
                     // Add cursor pointer style to tab info
                     tabInfo.style.cursor = 'pointer';
+                    
+                    // Add lock toggle functionality
+                    const lockIcon = tabElement.querySelector('.lock-icon');
+                    lockIcon.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent triggering the tab open when clicking lock
+                        toggleLock(tab.id);
+                    });
                     
                     const deleteBtn = tabElement.querySelector('.delete-btn');
                     deleteBtn.addEventListener('click', function(e) {
@@ -151,6 +162,30 @@ function deleteTab(tabId) {
                 chrome.storage.sync.set(updateData, function() {
                     loadAllMarkedTabs();
                 });
+            });
+        });
+    });
+}
+
+function toggleLock(tabId) {
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+        
+        // Find which key contains the tab with the given ID
+        chrome.storage.sync.get(dataKeys, function(tabsData) {
+            const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
+            
+            if (!keyToUpdate) {
+                return;
+            }
+            
+            // Toggle the locked state
+            const tab = tabsData[keyToUpdate];
+            tab.locked = !tab.locked;
+            
+            // Update the storage
+            chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
+                loadAllMarkedTabs();
             });
         });
     });

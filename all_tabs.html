@@ -62,6 +62,24 @@
         .delete-btn:hover {
             background-color: #ff0000;
         }
+        .lock-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        .lock-icon:hover {
+            opacity: 1;
+        }
+        .lock-icon.locked {
+            opacity: 1;
+        }
+        .tab-item.locked {
+            background-color: #f8f9fa;
+            border-color: #ff4444;
+        }
         .no-tabs {
             text-align: center;
             color: #666666;

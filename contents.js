@@ -9,6 +9,22 @@ window.onload = function() {
     });
 };
 
+// Function to update UI elements with current language
+function updateUI() {
+    // Update button texts
+    document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
+    document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs');
+    document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs');
+    document.getElementById('viewAllTabs').textContent = i18n.getString('viewAllTabs');
+    
+    // Update other UI elements as needed
+    const settingsLink = document.querySelector('.settings-link');
+    if (settingsLink) {
+        settingsLink.textContent = i18n.getString('settingsLink');
+    }
+}
+
 // Load language setting when the page is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     try {

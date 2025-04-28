@@ -9,6 +9,16 @@ window.onload = function() {
     });
 };
 
+// Load language setting when the page is loaded
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        await loadLanguageSetting();
+        updateUI();
+    } catch (error) {
+        console.error('Failed to load language setting:', error);
+    }
+});
+
 document.addEventListener("DOMContentLoaded", function(){
     // Load language setting first
     chrome.storage.sync.get(['language'], function(result) {

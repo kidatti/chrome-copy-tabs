@@ -12,13 +12,13 @@ const i18n = {
         deleteButton: "削除",
         
         // Settings page
-        settingsTitle: "CopyTabs 設定",
-        languageLabel: "言語:",
-        languageAuto: "自動 (ブラウザに基づく)",
-        languageJapanese: "日本語",
-        languageEnglish: "英語",
-        saveButton: "保存",
-        settingsSaved: "設定を保存しました！",
+        settingsTitle: "CopyTabs 設定 / CopyTabs Settings",
+        languageLabel: "言語 / Language:",
+        languageAuto: "自動 (ブラウザに基づく) / Auto (Based on browser)",
+        languageJapanese: "日本語 / Japanese",
+        languageEnglish: "英語 / English",
+        saveButton: "保存 / Save",
+        settingsSaved: "設定を保存しました！ / Settings saved successfully!",
         
         // Success messages
         copied: "コピーしました！",
@@ -117,15 +117,24 @@ function getUserLanguage() {
 
 // Load language setting from storage
 function loadLanguageSetting() {
-    chrome.storage.sync.get(['language'], function(result) {
-        if (result.language) {
-            currentLanguage = result.language;
-        }
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['language'], function(result) {
+            if (result.language) {
+                currentLanguage = result.language;
+            } else {
+                // If no language is set, use browser language
+                currentLanguage = navigator.language.startsWith('ja') ? 'ja' : 'en';
+            }
+            resolve();
+        });
     });
 }
 
 // Initialize by loading language setting
-loadLanguageSetting();
+loadLanguageSetting().then(() => {
+    // Language setting is now loaded
+    console.log('Language setting initialized:', currentLanguage);
+});
 
 // Export the functions
 window.i18n = i18n; 

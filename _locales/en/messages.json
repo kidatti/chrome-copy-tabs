@@ -4,7 +4,7 @@
     "description": "Extension name"
   },
   "description": {
-    "message": "Copy and mark tabs easily",
+    "message": "Copy 'title and URL' of open tabs and content in 'HTML/Markdown' format",
     "description": "Extension description"
   },
   "copyTabsTitle": {

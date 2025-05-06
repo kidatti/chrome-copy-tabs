@@ -1,5 +1,19 @@
 # Changelog / 変更履歴
 
+## v.0.6.0
+
+### English
+- Added export functionality for tabs
+  - HTML export
+  - HTML (Article) export using Readability.js
+  - Markdown export
+
+### 日本語
+- タブのエクスポート機能を追加
+  - HTML形式でのエクスポート
+  - HTML (Article)形式でのエクスポート（Readability.js使用）
+  - Markdown形式でのエクスポート
+
 ## v.0.5.4
 
 ### English

@@ -12,15 +12,11 @@
     "default_title": "__MSG_name__",
     "default_popup": "popup.html"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["contents.js"]
-    }
-  ],
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "http://*/*",
@@ -28,7 +24,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["all_tabs.html", "all_tabs.js"],
+      "resources": ["all_tabs.html", "all_tabs.js", "content.js", "html_utils.js", "readability.js"],
       "matches": ["<all_urls>"]
     }
   ],

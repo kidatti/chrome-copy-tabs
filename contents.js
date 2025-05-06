@@ -50,6 +50,9 @@ document.addEventListener("DOMContentLoaded", function(){
         document.getElementById('markCurrentTab').addEventListener('click', markCurrentTab);
         document.getElementById('markAllTabs').addEventListener('click', markAllTabs);
         document.getElementById('viewAllTabs').addEventListener('click', openAllTabsWindow);
+        document.getElementById('exportHtmlCurrentTab').addEventListener('click', exportHtmlCurrentTab);
+        document.getElementById('exportHtmlArticleCurrentTab').addEventListener('click', exportHtmlArticleCurrentTab);
+        document.getElementById('exportMarkdownCurrentTab').addEventListener('click', exportMarkdownCurrentTab);
         
         // Get current tab info
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -541,4 +544,333 @@ function processNewTabs(chromeTabs, existingTabs) {
             }, 2000);
         }
     });
+}
+
+function exportHtmlCurrentTab() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (!tabs || !tabs[0]) {
+            console.error("No active tab found");
+            showMessage(i18n.getString('error'), 'error');
+            return;
+        }
+
+        console.log("Executing script in tab:", tabs[0].id);
+        
+        // Execute the script directly
+        chrome.scripting.executeScript({
+            target: {tabId: tabs[0].id},
+            function: function() {
+                try {
+                    // Get the current page's HTML
+                    return document.documentElement.outerHTML;
+                } catch (error) {
+                    console.error("Error getting HTML:", error);
+                    return `ERROR: ${error.message}`;
+                }
+            }
+        }, function(results) {
+            if (chrome.runtime.lastError) {
+                console.error("Error executing script:", chrome.runtime.lastError);
+                showMessage(chrome.runtime.lastError.message, 'error');
+                return;
+            }
+
+            if (results && results[0] && results[0].result) {
+                const result = results[0].result;
+                if (typeof result === 'string' && result.startsWith('ERROR:')) {
+                    console.error("Error getting HTML:", result);
+                    showMessage(i18n.getString('error'), 'error');
+                    return;
+                }
+                
+                document.getElementById('input').value = result;
+                copy();
+                showMessage(i18n.getString('copied'), 'success');
+            } else {
+                console.error("No HTML content received");
+                showMessage(i18n.getString('error'), 'error');
+            }
+        });
+    });
+}
+
+function exportHtmlArticleCurrentTab() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs.length === 0) {
+            showMessage(i18n.getString('noTabs'), 'error');
+            return;
+        }
+
+        // First inject readability.js
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            files: ['readability.js']
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.error('Error injecting readability.js:', chrome.runtime.lastError);
+                showMessage(chrome.runtime.lastError.message, 'error');
+                return;
+            }
+
+            // Then execute the content extraction
+            chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                function: extractArticleContent
+            }, (results) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error executing script:', chrome.runtime.lastError);
+                    showMessage(chrome.runtime.lastError.message, 'error');
+                    return;
+                }
+
+                if (results && results[0] && results[0].result) {
+                    const articleContent = results[0].result;
+                    if (articleContent === null) {
+                        showMessage(i18n.getString('failedToExtract'), 'error');
+                        return;
+                    }
+                    document.getElementById('input').value = articleContent;
+                    copy();
+                    showMessage(i18n.getString('copied'), 'success');
+                } else {
+                    console.error('No results from content extraction');
+                    showMessage(i18n.getString('failedToExtract'), 'error');
+                }
+            });
+        });
+    });
+}
+
+function extractArticleContent() {
+    try {
+        console.log('Starting article extraction...');
+        const documentClone = document.cloneNode(true);
+        
+        // Check if Readability is available
+        if (typeof Readability === 'undefined') {
+            console.error('Readability is not defined');
+            return null;
+        }
+
+        console.log('Creating Readability instance...');
+        const reader = new Readability(documentClone);
+        
+        console.log('Parsing article...');
+        const article = reader.parse();
+
+        if (!article) {
+            console.error('Failed to parse article');
+            return null;
+        }
+
+        console.log('Article parsed successfully:', {
+            title: article.title,
+            contentLength: article.content.length
+        });
+
+        // Create a clean HTML document with the article content
+        const cleanHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${article.title}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2em;
+            margin-bottom: 1em;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>${article.title}</h1>
+    ${article.content}
+</body>
+</html>`;
+
+        return cleanHtml;
+    } catch (error) {
+        console.error('Error in extractArticleContent:', error);
+        return null;
+    }
+}
+
+function showMessage(message, type) {
+    const messageElement = document.getElementById('message');
+    messageElement.textContent = message;
+    messageElement.className = type;
+    messageElement.style.display = 'block';
+    setTimeout(() => {
+        messageElement.style.display = 'none';
+    }, 3000);
+}
+
+function exportMarkdownCurrentTab() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs.length === 0) {
+            showMessage(i18n.getString('noTabs'), 'error');
+            return;
+        }
+
+        // First inject readability.js
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            files: ['readability.js']
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.error('Error injecting readability.js:', chrome.runtime.lastError);
+                showMessage(chrome.runtime.lastError.message, 'error');
+                return;
+            }
+
+            // Then execute the content extraction and conversion
+            chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                function: extractAndConvertToMarkdown
+            }, (results) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error executing script:', chrome.runtime.lastError);
+                    showMessage(chrome.runtime.lastError.message, 'error');
+                    return;
+                }
+
+                if (results && results[0] && results[0].result) {
+                    const markdownContent = results[0].result;
+                    if (markdownContent === null) {
+                        showMessage(i18n.getString('failedToExtract'), 'error');
+                        return;
+                    }
+                    document.getElementById('input').value = markdownContent;
+                    copy();
+                    showMessage(i18n.getString('copied'), 'success');
+                } else {
+                    console.error('No results from content extraction');
+                    showMessage(i18n.getString('failedToExtract'), 'error');
+                }
+            });
+        });
+    });
+}
+
+function extractAndConvertToMarkdown() {
+    try {
+        console.log('Starting article extraction...');
+        const documentClone = document.cloneNode(true);
+        
+        // Check if Readability is available
+        if (typeof Readability === 'undefined') {
+            console.error('Readability is not defined');
+            return null;
+        }
+
+        console.log('Creating Readability instance...');
+        const reader = new Readability(documentClone);
+        
+        console.log('Parsing article...');
+        const article = reader.parse();
+
+        if (!article) {
+            console.error('Failed to parse article');
+            return null;
+        }
+
+        console.log('Article parsed successfully:', {
+            title: article.title,
+            contentLength: article.content.length
+        });
+
+        // Create a temporary div to parse the HTML content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = article.content;
+
+        // Convert to Markdown
+        let markdown = `# ${article.title}\n\n`;
+        
+        // Process each node in the article content
+        function processNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return node.textContent;
+            }
+
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                let content = '';
+                for (const child of node.childNodes) {
+                    content += processNode(child);
+                }
+
+                switch (node.tagName.toLowerCase()) {
+                    case 'h1':
+                        return `\n# ${content}\n\n`;
+                    case 'h2':
+                        return `\n## ${content}\n\n`;
+                    case 'h3':
+                        return `\n### ${content}\n\n`;
+                    case 'h4':
+                        return `\n#### ${content}\n\n`;
+                    case 'h5':
+                        return `\n##### ${content}\n\n`;
+                    case 'h6':
+                        return `\n###### ${content}\n\n`;
+                    case 'p':
+                        return `\n${content}\n\n`;
+                    case 'br':
+                        return '\n';
+                    case 'strong':
+                    case 'b':
+                        return `**${content}**`;
+                    case 'em':
+                    case 'i':
+                        return `*${content}*`;
+                    case 'a':
+                        const href = node.getAttribute('href');
+                        return href ? `[${content}](${href})` : content;
+                    case 'img':
+                        const src = node.getAttribute('src');
+                        const alt = node.getAttribute('alt') || '';
+                        return src ? `![${alt}](${src})` : '';
+                    case 'ul':
+                        return `\n${content}\n`;
+                    case 'ol':
+                        return `\n${content}\n`;
+                    case 'li':
+                        return `- ${content}\n`;
+                    case 'blockquote':
+                        return `\n> ${content}\n\n`;
+                    case 'code':
+                        return `\`${content}\``;
+                    case 'pre':
+                        return `\n\`\`\`\n${content}\n\`\`\`\n\n`;
+                    default:
+                        return content;
+                }
+            }
+
+            return '';
+        }
+
+        // Process the article content
+        markdown += processNode(tempDiv);
+
+        // Clean up the markdown
+        markdown = markdown
+            .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+            .replace(/\s+$/gm, '')      // Remove trailing whitespace
+            .trim();
+
+        return markdown;
+    } catch (error) {
+        console.error('Error in extractAndConvertToMarkdown:', error);
+        return null;
+    }
 }

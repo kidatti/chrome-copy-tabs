@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <style>
         body {
-            width: 300px;
+            width: 450px;
             padding: 10px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
@@ -45,19 +45,22 @@
             background-color: #45a049;
         }
         #message {
-            margin-top: 10px;
+            margin-bottom: 16px;
             padding: 8px;
             border-radius: 4px;
             text-align: center;
             display: none;
+            font-weight: 500;
         }
         .success {
             background-color: #dff0d8;
             color: #3c763d;
+            border: 1px solid #d6e9c6;
         }
         .error {
             background-color: #f2dede;
             color: #a94442;
+            border: 1px solid #ebccd1;
         }
         .hidden {
             position: absolute;
@@ -129,31 +132,37 @@
     </style>
 </head>
 <body>
+    <div id="message"></div>
     <div class="button-container">
         <div class="section">
-            <div class="section-title">Copy Tabs</div>
+            <div class="section-title">This Tab</div>
             <div class="button-group">
-                <button id="copyCurrentTab">Copy This Tab</button>
-                <button id="copyAllTabs">Copy All Tabs</button>
+                <button id="copyCurrentTab">Copy Title & URL</button>
+                <button id="markCurrentTab">Mark</button>
+            </div>
+            <div class="button-group">
+                <button id="exportHtmlCurrentTab">HTML</button>
+                <button id="exportHtmlArticleCurrentTab">HTML (Article)</button>
+                <button id="exportMarkdownCurrentTab">Markdown</button>
             </div>
         </div>
         <div class="section">
-            <div class="section-title">Mark Tabs</div>
+            <div class="section-title">All Tabs</div>
             <div class="button-group">
-                <button id="markCurrentTab">Mark This Tab</button>
-                <button id="markAllTabs">Mark All Tabs</button>
+                <button id="copyAllTabs">Copy Title & URL</button>
+                <button id="markAllTabs">Mark</button>
             </div>
         </div>
         <div class="section">
             <button id="viewAllTabs" class="view-all-btn">View All Tabs</button>
         </div>
     </div>
-    <div id="message"></div>
     <div id="title" class="hidden"></div>
     <div id="url" class="hidden"></div>
     <textarea id="input" class="hidden"></textarea>
     <div id="tab-list" class="tab-list"></div>
     <script type="text/javascript" src="i18n.js"></script>
+    <script type="text/javascript" src="readability.js"></script>
     <script type="text/javascript" src="contents.js"></script>
 </body>
 </html>

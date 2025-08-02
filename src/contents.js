@@ -16,7 +16,7 @@ function updateUI() {
     document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs');
     document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
     document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs');
-    document.getElementById('viewAllTabs').innerHTML = '<span class="icon-view"></span>' + i18n.getString('viewAllTabs');
+    // Header icon doesn't need text update
     
     // Update other UI elements as needed
     const settingsLink = document.querySelector('.settings-link');
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function(){
         document.getElementById('copyAllTabs').addEventListener('click', getAllTabs);
         document.getElementById('markCurrentTab').addEventListener('click', markCurrentTab);
         document.getElementById('markAllTabs').addEventListener('click', markAllTabs);
-        document.getElementById('viewAllTabs').addEventListener('click', openAllTabsWindow);
+        document.getElementById('viewAllTabsIcon').addEventListener('click', openAllTabsWindow);
         document.getElementById('exportHtmlCurrentTab').addEventListener('click', exportHtmlCurrentTab);
         document.getElementById('exportHtmlArticleCurrentTab').addEventListener('click', exportHtmlArticleCurrentTab);
         document.getElementById('exportMarkdownCurrentTab').addEventListener('click', exportMarkdownCurrentTab);
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function(){
         document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs');
         document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
         document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs');
-        document.getElementById('viewAllTabs').innerHTML = i18n.getString('viewAllTabs');
+        // Header icon doesn't need text update
         
         count();
         loadMarkedTabs();
@@ -329,16 +329,25 @@ function deleteTab(tabId) {
 }
 
 function updateViewAllButton() {
-    const viewAllButton = document.getElementById('viewAllTabs');
+    const tabCountElement = document.getElementById('tabCount');
+    const viewAllContainer = document.getElementById('viewAllTabsIcon');
     
     chrome.storage.sync.get(['dataKeys'], function(result) {
         const dataKeys = result.dataKeys || [];
+        const count = dataKeys.length;
         
-        if (dataKeys.length > 0) {
-            viewAllButton.style.display = 'block';
-            viewAllButton.innerHTML = i18n.getString('viewAllTabs') + " (" + dataKeys.length + ")";
-        } else {
-            viewAllButton.style.display = 'none';
+        if (tabCountElement) {
+            tabCountElement.textContent = count;
+        }
+        
+        if (viewAllContainer) {
+            if (count > 0) {
+                viewAllContainer.title = `View All Tabs (${count})`;
+                viewAllContainer.style.opacity = '1';
+            } else {
+                viewAllContainer.title = 'View All Tabs';
+                viewAllContainer.style.opacity = '0.6';
+            }
         }
     });
 }
@@ -426,12 +435,18 @@ function addStorageSizeInfo() {
 }
 
 function openAllTabsWindow() {
-    // Create a new window to display all tabs
-    chrome.windows.create({
-        url: 'all_tabs.html',
-        type: 'popup',
-        width: 800,
-        height: 600
+    // Check if all_tabs.html is already open
+    chrome.tabs.query({url: chrome.runtime.getURL('all_tabs.html')}, function(tabs) {
+        if (tabs.length > 0) {
+            // If tab exists, switch to it
+            chrome.tabs.update(tabs[0].id, {active: true});
+            chrome.windows.update(tabs[0].windowId, {focused: true});
+        } else {
+            // Create a new tab if it doesn't exist
+            chrome.tabs.create({
+                url: 'all_tabs.html'
+            });
+        }
     });
 }
 

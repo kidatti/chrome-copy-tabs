@@ -1,0 +1,80 @@
+# CopyTabs Chrome拡張機能
+
+**注意**: この CLAUDE.md ファイルは日本語で記述されています。Claude が日本語でプロジェクトを理解し、適切に対応できるようにするためです。
+
+## プロジェクト概要
+CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タブのコピー、マーク、コンテンツエクスポート機能を提供し、ユーザーが後で参照したいタブを管理できるようにします。
+
+## 主要機能
+- **タブコピー**: 現在のタブまたは全タブのタイトルとURLをコピー
+- **タブエクスポート**: 現在のタブのコンテンツをHTML、HTML (Article)、Markdown形式でエクスポート
+- **タブマーク**: 現在のタブまたは全タブを後で参照するためにマーク
+- **タブ管理**: マークしたタブの表示と管理、デバイス間同期
+- **多言語対応**: 日本語/英語対応、自動検出機能
+
+## ファイル構造
+
+### コア拡張機能ファイル
+- `src/manifest.json`: 拡張機能設定 (Manifest V3)
+- `src/popup.html`: メインポップアップインターフェース
+- `src/popup.js`: ポップアップ機能の実装
+- `src/background.js`: バックグラウンド処理
+- `src/content.js`: ページ操作用コンテンツスクリプト
+
+### フロントエンドコンポーネント
+- `src/options.html`: 設定ページ
+- `src/options.js`: 設定機能
+- `src/all_tabs.html`: 全マークタブ表示ページ
+- `src/all_tabs.js`: 全タブ管理
+
+### ユーティリティ
+- `src/html_utils.js`: HTML操作ユーティリティ
+  - `simplifyHtml()`: HTMLからスクリプト/スタイルを削除
+  - `getSimplifiedPageHtml()`: 簡素化されたページHTMLを取得
+- `src/readability.js`: クリーンなコンテンツエクスポート用記事抽出ライブラリ
+- `src/i18n.js`: 国際化対応
+- `src/contents.js`: メインポップアップロジック
+
+### リソース
+- `src/_locales/`: 翻訳ファイル (en/ja)
+- `images/`: 拡張機能アイコンとUIアセット
+
+## 技術スタック
+- **マニフェストバージョン**: 3
+- **権限**: tabs, storage, activeTab, scripting
+- **ストレージ**: Chrome同期ストレージ (~100KB制限)
+- **アーキテクチャ**: ポップアップベースのインターフェースとバックグラウンド処理
+
+## 開発メモ
+- デバイス間同期にGoogle同期ストレージを使用
+- マークタブの重複URL除外機能を実装
+- 効率的なストレージ使用のためのHTML簡素化
+- クリーンな記事抽出のためのReadability.js統合
+- モダンなCSSスタイリングによるレスポンシブデザイン
+
+## ビルドとデプロイ
+
+### 開発環境
+- `src/`ディレクトリからChrome開発者モードでパッケージ化されていない拡張機能を読み込み
+
+### ビルドコマンド
+- `make build` - 公開用パッケージ（zip）を作成
+- `make dev` - 開発用ビルド（解凍状態）を作成
+- `make release` - リリース用パッケージ作成と情報表示
+- `make clean` - ビルド成果物をクリーンアップ
+- `make validate` - 拡張機能ファイルの検証
+- `make version` - 現在のバージョンを表示
+- `make list-files` - パッケージに含まれるファイル一覧
+- `make help` - ヘルプ表示
+
+### パッケージ作成
+```bash
+# リリース用パッケージ作成
+make release
+# → dist/copytabs-v0.6.1.zip が作成される
+```
+
+### ファイル構成
+- ビルド出力: `dist/` ディレクトリ
+- パッケージ名: `copytabs-v{VERSION}.zip` (manifest.jsonのversionを使用)
+- Chrome Web Store用zipファイルを自動生成

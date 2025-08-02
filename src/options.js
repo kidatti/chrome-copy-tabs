@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for refresh storage button
     document.getElementById('refresh-storage-button').addEventListener('click', displayStorageContents);
     
+    // Add event listener for all tabs icon
+    document.getElementById('allTabsIcon').addEventListener('click', openAllTabsPage);
+    
     // Update UI with current language
     updateLanguageUI();
     
@@ -38,11 +41,18 @@ function saveSettings() {
     chrome.storage.sync.set({
         language: selectedLanguage
     }, function() {
-        // Show success message
-        showStatus(i18n.getString('settingsSaved'), 'success');
+        // Set the language directly before showing message
+        if (selectedLanguage !== 'auto') {
+            i18n.setLanguage(selectedLanguage);
+        } else {
+            i18n.setLanguage('auto');
+        }
         
         // Update the UI language
         updateLanguageUI();
+        
+        // Then show success message with correct language
+        showStatus(i18n.getString('settingsSaved'), 'success');
         
         // Refresh the storage display
         displayStorageContents();
@@ -71,7 +81,7 @@ function updateLanguageUI() {
         if (language !== 'auto') {
             i18n.setLanguage(language);
         } else {
-            i18n.resetLanguage();
+            i18n.setLanguage('auto');
         }
         
         // Update UI elements
@@ -81,6 +91,25 @@ function updateLanguageUI() {
         document.getElementById('ja-option').textContent = i18n.getString('languageJapanese');
         document.getElementById('en-option').textContent = i18n.getString('languageEnglish');
         document.getElementById('save-button').textContent = i18n.getString('saveButton');
+        document.getElementById('storage-contents-title').textContent = i18n.getString('storageContents');
+        document.getElementById('refresh-storage-button').textContent = i18n.getString('refreshButton');
+    });
+}
+
+// Open all tabs page
+function openAllTabsPage() {
+    // Check if all_tabs.html is already open
+    chrome.tabs.query({url: chrome.runtime.getURL('all_tabs.html')}, function(tabs) {
+        if (tabs.length > 0) {
+            // If tab exists, switch to it
+            chrome.tabs.update(tabs[0].id, {active: true});
+            chrome.windows.update(tabs[0].windowId, {focused: true});
+        } else {
+            // Create a new tab if it doesn't exist
+            chrome.tabs.create({
+                url: 'all_tabs.html'
+            });
+        }
     });
 }
 

@@ -89,11 +89,49 @@
             color: #2196F3;
             font-size: 1.2em;
         }
+        
+        /* Header styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            border: none;
+            padding: 0;
+        }
+        .all-tabs-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(33, 150, 243, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            text-decoration: none;
+            color: #2196F3;
+        }
+        .all-tabs-icon:hover {
+            background: rgba(33, 150, 243, 0.2);
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 id="settings-title">CopyTabs Settings</h1>
+        <div class="header">
+            <h1 id="settings-title">CopyTabs Settings</h1>
+            <div class="all-tabs-icon" id="allTabsIcon" title="View All Tabs">
+                <span>🗂️</span>
+            </div>
+        </div>
         <div class="form-group">
             <label for="language-select" id="language-label">Language:</label>
             <select id="language-select">
@@ -106,7 +144,7 @@
         <div id="status" class="status"></div>
         
         <div id="storage-display">
-            <h2>Storage Contents</h2>
+            <h2 id="storage-contents-title">Storage Contents</h2>
             <div id="storage-json"></div>
             <button id="refresh-storage-button" style="margin-top: 10px;">Refresh</button>
         </div>

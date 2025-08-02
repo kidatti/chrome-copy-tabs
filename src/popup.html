@@ -263,10 +263,26 @@
         /* Header styles */
         .header {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
             padding: 4px 0;
+        }
+        .settings-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        .settings-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05) rotate(45deg);
         }
         .view-all-container {
             display: flex;
@@ -344,6 +360,9 @@
 </head>
 <body>
     <div class="header">
+        <div class="settings-icon" id="settingsIcon" title="Settings">
+            <span>⚙️</span>
+        </div>
         <div class="view-all-container" id="viewAllTabsIcon" title="View All Tabs">
             <div class="view-all-icon">🗂️</div>
             <div class="tab-count" id="tabCount">0</div>

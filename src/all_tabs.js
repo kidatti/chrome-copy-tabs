@@ -9,9 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
     }
     
-    // Set page title
-    document.title = i18n.getString('pageTitle');
-    document.getElementById('page-title').textContent = i18n.getString('pageTitle');
+    // Set page title (removed page-title element display)
     
     // Set folder-related UI text
     document.getElementById('folders-title').textContent = i18n.getString('folders');
@@ -32,9 +30,52 @@ document.addEventListener("DOMContentLoaded", function() {
         selectFolder(null);
     });
     
+    // Add click event for uncategorized folder rename button
+    document.querySelector('.rename-uncategorized-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        renameUncategorizedFolder();
+    });
+    
+    // Add click event for settings icon
+    document.getElementById('settingsIcon').addEventListener('click', function() {
+        chrome.runtime.openOptionsPage();
+    });
+    
     // Load folders and tabs
     loadFolders();
+    loadUncategorizedName();
     loadAllMarkedTabs();
+});
+
+// Listen for storage changes to update language
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+    if (namespace === 'sync' && changes.language) {
+        console.log('All_tabs: Language setting changed to:', changes.language.newValue);
+        
+        // Set the new language
+        if (changes.language.newValue) {
+            if (changes.language.newValue !== 'auto') {
+                i18n.setLanguage(changes.language.newValue);
+            } else {
+                i18n.setLanguage('auto');
+            }
+        } else {
+            i18n.setLanguage('auto');
+        }
+        
+        // Update folder-related UI text
+        document.getElementById('folders-title').textContent = i18n.getString('folders');
+        document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
+        
+        // Update modal UI text
+        initializeModalTexts();
+        
+        // Reload uncategorized name
+        loadUncategorizedName();
+        
+        // Reload tabs to update any displayed text
+        loadAllMarkedTabs();
+    }
 });
 
 // Function to migrate from old markedTabs format to new dataKeys format
@@ -239,11 +280,11 @@ function createFolderElement(folder) {
     folderElement.innerHTML = `
         <div class="folder-name">${folder.name}</div>
         <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="folder-count">0</div>
             <div class="folder-actions">
                 <button class="folder-btn rename-folder-btn" data-folder-id="${folder.id}">✏️</button>
                 <button class="folder-btn delete-folder-btn" data-folder-id="${folder.id}">🗑️</button>
             </div>
+            <div class="folder-count">0</div>
         </div>
     `;
     
@@ -339,9 +380,22 @@ function renameFolderDialog(folderId) {
 function confirmRenameFolder() {
     const newName = document.getElementById('rename-folder-input').value.trim();
     if (newName && currentRenameFolderId) {
-        renameFolder(currentRenameFolderId, newName);
+        if (currentRenameFolderId === 'uncategorized') {
+            renameUncategorized(newName);
+        } else {
+            renameFolder(currentRenameFolderId, newName);
+        }
         closeAllModals();
     }
+}
+
+// Rename uncategorized folder
+function renameUncategorized(newName) {
+    chrome.storage.sync.set({ uncategorizedName: newName }, function() {
+        // Update UI immediately
+        document.getElementById('uncategorized-name').textContent = newName;
+        updateUncategorizedNameInUI(newName);
+    });
 }
 
 // Rename folder
@@ -357,6 +411,22 @@ function renameFolder(folderId, newName) {
                 loadFolders();
             });
         }
+    });
+}
+
+// Rename uncategorized folder
+function renameUncategorizedFolder() {
+    chrome.storage.sync.get(['uncategorizedName'], function(result) {
+        const currentName = result.uncategorizedName || i18n.getString('uncategorized');
+        
+        currentRenameFolderId = 'uncategorized';
+        document.getElementById('rename-folder-input').value = currentName;
+        showModal('rename-folder-modal');
+        setTimeout(() => {
+            const input = document.getElementById('rename-folder-input');
+            input.focus();
+            input.select();
+        }, 100);
     });
 }
 
@@ -597,11 +667,12 @@ function deleteTab(tabId) {
 
 // Populate folder select dropdown
 function populateFolderSelect(selectElement, currentFolderId) {
-    chrome.storage.sync.get(['folders'], function(result) {
+    chrome.storage.sync.get(['folders', 'uncategorizedName'], function(result) {
         const folders = result.folders || [];
+        const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
         
         // Clear existing options except the first one (未分類)
-        selectElement.innerHTML = `<option value="null">${i18n.getString('uncategorized')}</option>`;
+        selectElement.innerHTML = `<option value="null">${uncategorizedName}</option>`;
         
         // Add folder options
         folders.forEach(folder => {
@@ -640,6 +711,35 @@ function moveTabToFolder(tabId, folderId) {
                 }
             });
         });
+    });
+}
+
+// Update uncategorized name in UI
+function updateUncategorizedNameInUI(newName) {
+    // Update in all folder selects
+    document.querySelectorAll('.folder-select option[value="null"]').forEach(option => {
+        option.textContent = newName;
+    });
+    
+    // Update in any other places where uncategorized is displayed
+    const uncategorizedElements = document.querySelectorAll('.uncategorized-display');
+    uncategorizedElements.forEach(element => {
+        element.textContent = newName;
+    });
+}
+
+// Load uncategorized name from storage
+function loadUncategorizedName() {
+    chrome.storage.sync.get(['uncategorizedName'], function(result) {
+        const customName = result.uncategorizedName;
+        if (customName) {
+            document.getElementById('uncategorized-name').textContent = customName;
+            updateUncategorizedNameInUI(customName);
+        } else {
+            const defaultName = i18n.getString('uncategorized');
+            document.getElementById('uncategorized-name').textContent = defaultName;
+            updateUncategorizedNameInUI(defaultName);
+        }
     });
 }
 

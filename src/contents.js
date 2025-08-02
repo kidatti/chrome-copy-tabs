@@ -1,13 +1,14 @@
-window.onload = function() {
-    // Load language setting
-    chrome.storage.sync.get(['language'], function(result) {
-        if (result.language) {
-            i18n.setLanguage(result.language);
-        } else {
-            i18n.resetLanguage();
-        }
-    });
-};
+// Remove window.onload as it's redundant with DOMContentLoaded
+// window.onload = function() {
+//     // Load language setting
+//     chrome.storage.sync.get(['language'], function(result) {
+//         if (result.language) {
+//             i18n.setLanguage(result.language);
+//         } else {
+//             i18n.setLanguage('auto');
+//         }
+//     });
+// };
 
 // Function to update UI elements with current language
 function updateUI() {
@@ -25,24 +26,19 @@ function updateUI() {
     }
 }
 
-// Load language setting when the page is loaded
-document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        await loadLanguageSetting();
-        updateUI();
-    } catch (error) {
-        console.error('Failed to load language setting:', error);
-    }
-});
-
 document.addEventListener("DOMContentLoaded", function(){
     // Load language setting first
     chrome.storage.sync.get(['language'], function(result) {
+        console.log('Contents.js language setting:', result.language);
         if (result.language) {
             i18n.setLanguage(result.language);
         } else {
-            i18n.resetLanguage();
+            console.log('No language setting found, setting to auto');
+            i18n.setLanguage('auto');
         }
+        
+        // Update UI with current language
+        updateUI();
         
         // Then set up event listeners and update UI
         document.getElementById('copyCurrentTab').addEventListener('click', getActiveTab);
@@ -62,12 +58,7 @@ document.addEventListener("DOMContentLoaded", function(){
             }
         });
         
-        // Update button texts
-        document.getElementById('copyCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('copyThisTab');
-        document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs');
-        document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
-        document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs');
-        // Header icon doesn't need text update
+        // Button texts are now updated in updateUI() function
         
         count();
         loadMarkedTabs();
@@ -75,8 +66,8 @@ document.addEventListener("DOMContentLoaded", function(){
         // Update view all button
         updateViewAllButton();
         
-        // Add settings link
-        addSettingsLink();
+        // Initialize settings icon
+        initializeSettingsIcon();
         
         // Initialize folder UI texts
         initializeFolderUI();
@@ -89,6 +80,40 @@ document.addEventListener("DOMContentLoaded", function(){
         document.getElementById('folder-select').addEventListener('change', onFolderSelectChange);
         document.getElementById('set-default-folder').addEventListener('click', setDefaultFolder);
     });
+});
+
+// Listen for storage changes to update language
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+    if (namespace === 'sync' && changes.language) {
+        console.log('Popup: Language setting changed to:', changes.language.newValue);
+        
+        // Set the new language
+        if (changes.language.newValue) {
+            if (changes.language.newValue !== 'auto') {
+                i18n.setLanguage(changes.language.newValue);
+            } else {
+                i18n.setLanguage('auto');
+            }
+        } else {
+            i18n.setLanguage('auto');
+        }
+        
+        // Update UI with new language
+        updateUI();
+        // Reload other UI elements
+        initializeFolderUI();
+        loadFoldersForPopup();
+        loadDefaultFolder();
+        
+        // Update settings icon tooltip
+        const settingsIcon = document.getElementById('settingsIcon');
+        if (settingsIcon) {
+            settingsIcon.title = i18n.getString('settingsLink') || 'Settings';
+        }
+        
+        // Reload marked tabs to update any displayed text
+        loadMarkedTabs();
+    }
 });
 
 function count() {
@@ -368,86 +393,25 @@ function updateViewAllButton() {
     });
 }
 
-function addSettingsLink() {
-    // Check if the settings link already exists
-    let settingsLink = document.querySelector('.settings-link');
-    
-    if (!settingsLink) {
-        // Create the settings link
-        settingsLink = document.createElement('div');
-        settingsLink.className = 'settings-link';
-        settingsLink.style.textAlign = 'center';
-        settingsLink.style.marginTop = '16px';
-        settingsLink.style.padding = '8px 16px';
-        settingsLink.style.fontSize = '14px';
-        settingsLink.style.color = 'white';
-        settingsLink.style.background = 'linear-gradient(135deg, #6c757d 0%, #495057 100%)';
-        settingsLink.style.borderRadius = '8px';
-        settingsLink.style.cursor = 'pointer';
-        settingsLink.style.textDecoration = 'none';
-        settingsLink.style.transition = 'all 0.3s ease';
-        settingsLink.style.display = 'inline-flex';
-        settingsLink.style.alignItems = 'center';
-        settingsLink.style.gap = '8px';
-        settingsLink.style.justifyContent = 'center';
-        settingsLink.style.width = '100%';
-        settingsLink.style.boxSizing = 'border-box';
-        
-        // Load language setting before setting the text
+// Initialize settings icon
+function initializeSettingsIcon() {
+    const settingsIcon = document.getElementById('settingsIcon');
+    if (settingsIcon) {
+        // Set tooltip text
         chrome.storage.sync.get(['language'], function(result) {
             if (result.language) {
                 i18n.setLanguage(result.language);
             } else {
-                i18n.resetLanguage();
+                i18n.setLanguage('auto');
             }
-            settingsLink.innerHTML = '⚙️ ' + i18n.getString('settingsLink');
-        });
-        
-        // Add hover effects
-        settingsLink.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 6px 20px rgba(108, 117, 125, 0.4)';
-        });
-        
-        settingsLink.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = 'none';
+            settingsIcon.title = i18n.getString('settingsLink') || 'Settings';
         });
         
         // Add click event to open options page
-        settingsLink.addEventListener('click', function() {
+        settingsIcon.addEventListener('click', function() {
             chrome.runtime.openOptionsPage();
         });
-        
-        // Add to the popup at the bottom
-        const tabList = document.getElementById('tab-list');
-        tabList.parentNode.insertBefore(settingsLink, tabList.nextSibling);
-        
-        // Add storage size info
-        addStorageSizeInfo();
     }
-}
-
-// Function to display storage size information
-function addStorageSizeInfo() {
-    // Create storage info element
-    const storageInfo = document.createElement('div');
-    storageInfo.className = 'storage-info';
-    storageInfo.style.textAlign = 'center';
-    storageInfo.style.marginTop = '5px';
-    storageInfo.style.fontSize = '10px';
-    storageInfo.style.color = '#666';
-    
-    // Get storage size
-    chrome.storage.sync.get(null, function(items) {
-        const size = JSON.stringify(items).length;
-        const sizeKB = (size / 1024).toFixed(2);
-        storageInfo.innerHTML = `Storage: ${sizeKB} KB / 100 KB`;
-        
-        // Add to the popup after settings link
-        const settingsLink = document.querySelector('.settings-link');
-        settingsLink.parentNode.insertBefore(storageInfo, settingsLink.nextSibling);
-    });
 }
 
 function openAllTabsWindow() {
@@ -941,12 +905,13 @@ function initializeFolderUI() {
 
 // Load folders for popup
 function loadFoldersForPopup() {
-    chrome.storage.sync.get(['folders'], function(result) {
+    chrome.storage.sync.get(['folders', 'uncategorizedName'], function(result) {
         const folders = result.folders || [];
+        const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
         const folderSelect = document.getElementById('folder-select');
         
         // Clear existing options except the first one
-        folderSelect.innerHTML = `<option value="null">${i18n.getString('uncategorized')}</option>`;
+        folderSelect.innerHTML = `<option value="null">${uncategorizedName}</option>`;
         
         // Add folder options
         folders.forEach(folder => {

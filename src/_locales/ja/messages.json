@@ -16,19 +16,19 @@
     "description": "マークセクションのタイトル"
   },
   "copyThisTab": {
-    "message": "現在のタブをコピー",
+    "message": "このタブ",
     "description": "現在のタブをコピーするボタン"
   },
   "copyAllTabs": {
-    "message": "すべてのタブをコピー",
+    "message": "すべてのタブ",
     "description": "すべてのタブをコピーするボタン"
   },
   "markThisTab": {
-    "message": "現在のタブをマーク",
+    "message": "このタブ",
     "description": "現在のタブをマークするボタン"
   },
   "markAllTabs": {
-    "message": "すべてのタブをマーク",
+    "message": "すべてのタブ",
     "description": "すべてのタブをマークするボタン"
   }
 } 

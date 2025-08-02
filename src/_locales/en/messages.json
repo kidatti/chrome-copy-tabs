@@ -16,19 +16,19 @@
     "description": "Title for mark tabs section"
   },
   "copyThisTab": {
-    "message": "Copy Title & URL",
+    "message": "This Tab",
     "description": "Button to copy current tab"
   },
   "copyAllTabs": {
-    "message": "Copy Title & URL",
+    "message": "All Tabs",
     "description": "Button to copy all tabs"
   },
   "markThisTab": {
-    "message": "Mark",
+    "message": "This Tab",
     "description": "Button to mark current tab"
   },
   "markAllTabs": {
-    "message": "Mark",
+    "message": "All Tabs",
     "description": "Button to mark all tabs"
   }
 } 

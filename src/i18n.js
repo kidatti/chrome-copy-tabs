@@ -2,10 +2,10 @@
 const i18n = {
     ja: {
         // Button texts
-        copyThisTab: "Copy Title & URL",
-        copyAllTabs: "Copy Title & URL",
-        markThisTab: "Mark",
-        markAllTabs: "Mark",
+        copyThisTab: "このタブ",
+        copyAllTabs: "すべてのタブ",
+        markThisTab: "このタブ",
+        markAllTabs: "すべてのタブ",
         viewAllTabs: "すべてのタブ",
         pageTitle: "マークされたタブ一覧",
         settingsLink: "設定を開く",
@@ -40,10 +40,10 @@ const i18n = {
     },
     en: {
         // Button texts
-        copyThisTab: "Copy Title & URL",
-        copyAllTabs: "Copy Title & URL",
-        markThisTab: "Mark",
-        markAllTabs: "Mark",
+        copyThisTab: "This Tab",
+        copyAllTabs: "All Tabs",
+        markThisTab: "This Tab",
+        markAllTabs: "All Tabs",
         viewAllTabs: "All Tabs",
         pageTitle: "Marked Tabs List",
         settingsLink: "Open Settings",

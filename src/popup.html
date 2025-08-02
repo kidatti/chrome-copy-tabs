@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 450px;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            margin: 0;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+        
+        /* Section specific styling */
+        .copy-section .section-title {
+            color: #059669;
+        }
+        .copy-section .section-title::before {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+        
+        .mark-section .section-title {
+            color: #dc2626;
+        }
+        .mark-section .section-title::before {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+        
+        .export-section .section-title {
+            color: #7c3aed;
+        }
+        .export-section .section-title::before {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        }
+        
+        /* Section title icons */
+        .copy-section .section-title::after {
+            content: "📋";
+            font-size: 18px;
+            margin-left: auto;
+        }
+        
+        .mark-section .section-title::after {
+            content: "🔖";
+            font-size: 18px;
+            margin-left: auto;
+        }
+        
+        .export-section .section-title::after {
+            content: "💾";
+            font-size: 18px;
+            margin-left: auto;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+        .button-group button {
+            flex: 1;
+        }
+        button {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #message {
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+            font-weight: 500;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        .hidden {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+        }
+        .tab-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        .tab-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .tab-info {
+            flex: 1;
+            margin-right: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-info:hover {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .tab-title {
+            font-size: 14px;
+            color: #333333;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        .tab-url {
+            font-size: 12px;
+            color: #666666;
+            word-break: break-all;
+        }
+        .delete-btn {
+            padding: 6px 12px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .delete-btn:hover {
+            background-color: #ff0000;
+        }
+        .no-tabs {
+            text-align: center;
+            color: #666666;
+            padding: 20px;
+        }
+        .view-all-btn {
+            margin-top: 8px;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            width: 100%;
+        }
+        .view-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+        }
+        
+        /* Icon styles */
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+        }
+        
+        /* Button specific styling */
+        .copy-section button {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+        }
+        .copy-section button:hover {
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+        }
+        
+        .mark-section button {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+        .mark-section button:hover {
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+        }
+        
+        .export-section button {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+        }
+        .export-section button:hover {
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        }
+
+        /* SVG Icons */
+        .icon-copy::before {
+            content: "📋";
+            font-size: 16px;
+        }
+        .icon-mark::before {
+            content: "🔖";
+            font-size: 16px;
+        }
+        .icon-html::before {
+            content: "🌐";
+            font-size: 16px;
+        }
+        .icon-article::before {
+            content: "📄";
+            font-size: 16px;
+        }
+        .icon-markdown::before {
+            content: "📝";
+            font-size: 16px;
+        }
+        .icon-view::before {
+            content: "👀";
+            font-size: 16px;
+        }
+        .icon-this-tab::before {
+            content: "📑";
+            font-size: 16px;
+        }
+        .icon-all-tabs::before {
+            content: "📚";
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="message"></div>
+    <div class="button-container">
+        <div class="section mark-section">
+            <div class="section-title">Mark Tabs</div>
+            <div class="button-group">
+                <button id="markCurrentTab"><span class="icon-this-tab"></span>This Tab</button>
+                <button id="markAllTabs"><span class="icon-all-tabs"></span>All Tabs</button>
+            </div>
+        </div>
+        <div class="section copy-section">
+            <div class="section-title">Copy Title & URL</div>
+            <div class="button-group">
+                <button id="copyCurrentTab"><span class="icon-this-tab"></span>This Tab</button>
+                <button id="copyAllTabs"><span class="icon-all-tabs"></span>All Tabs</button>
+            </div>
+        </div>
+        <div class="section export-section">
+            <div class="section-title">Export Tab Content</div>
+            <div class="button-group">
+                <button id="exportHtmlCurrentTab"><span class="icon-html"></span>HTML</button>
+                <button id="exportHtmlArticleCurrentTab"><span class="icon-article"></span>Article</button>
+                <button id="exportMarkdownCurrentTab"><span class="icon-markdown"></span>Markdown</button>
+            </div>
+        </div>
+        <div class="section">
+            <button id="viewAllTabs" class="view-all-btn"><span class="icon-view"></span>View All Tabs</button>
+        </div>
+    </div>
+    <div id="title" class="hidden"></div>
+    <div id="url" class="hidden"></div>
+    <textarea id="input" class="hidden"></textarea>
+    <div id="tab-list" class="tab-list"></div>
+    <script type="text/javascript" src="i18n.js"></script>
+    <script type="text/javascript" src="readability.js"></script>
+    <script type="text/javascript" src="contents.js"></script>
+</body>
+</html>

@@ -12,11 +12,11 @@ window.onload = function() {
 // Function to update UI elements with current language
 function updateUI() {
     // Update button texts
-    document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
-    document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs');
-    document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
-    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs');
-    document.getElementById('viewAllTabs').textContent = i18n.getString('viewAllTabs');
+    document.getElementById('copyCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('copyThisTab');
+    document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs');
+    document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
+    document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs');
+    document.getElementById('viewAllTabs').innerHTML = '<span class="icon-view"></span>' + i18n.getString('viewAllTabs');
     
     // Update other UI elements as needed
     const settingsLink = document.querySelector('.settings-link');
@@ -63,10 +63,10 @@ document.addEventListener("DOMContentLoaded", function(){
         });
         
         // Update button texts
-        document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copyThisTab');
-        document.getElementById('copyAllTabs').innerHTML = i18n.getString('copyAllTabs');
-        document.getElementById('markCurrentTab').innerHTML = i18n.getString('markThisTab');
-        document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs');
+        document.getElementById('copyCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('copyThisTab');
+        document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs');
+        document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
+        document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs');
         document.getElementById('viewAllTabs').innerHTML = i18n.getString('viewAllTabs');
         
         count();
@@ -83,8 +83,8 @@ document.addEventListener("DOMContentLoaded", function(){
 function count() {
     chrome.tabs.query({}, function(tabs) {
         const total = tabs.length;
-        document.getElementById('copyAllTabs').innerHTML = i18n.getString('copyAllTabs') + " (" + total + ")";
-        document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + total + ")";
+        document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs') + " (" + total + ")";;
+        document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + total + ")";
     });
 }
 
@@ -97,7 +97,7 @@ function getActiveTab() {
                 copy();
                 document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copied');
                 setTimeout(() => {
-                    document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copyThisTab');
+                    document.getElementById('copyCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('copyThisTab');
                 }, 2000);
             }
             resolve(tabs);
@@ -115,7 +115,7 @@ function getAllTabs() {
         copy();
         document.getElementById('copyAllTabs').innerHTML = i18n.getString('copied');
         setTimeout(() => {
-            document.getElementById('copyAllTabs').innerHTML = i18n.getString('copyAllTabs') + " (" + tabs.length + ")";
+            document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs') + " (" + tabs.length + ")";;
         }, 2000);
     });
 }
@@ -131,7 +131,7 @@ function markCurrentTab() {
         if (tabs.length === 0) {
             document.getElementById('markCurrentTab').innerHTML = i18n.getString('noTabs');
             setTimeout(() => {
-                document.getElementById('markCurrentTab').innerHTML = i18n.getString('markThisTab');
+                document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
             }, 2000);
             return;
         }
@@ -152,7 +152,7 @@ function markCurrentTab() {
                     if (isDuplicate) {
                         document.getElementById('markCurrentTab').innerHTML = i18n.getString('alreadyMarked');
                         setTimeout(() => {
-                            document.getElementById('markCurrentTab').innerHTML = i18n.getString('markThisTab');
+                            document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
                         }, 2000);
                         return;
                     }
@@ -191,7 +191,7 @@ function addNewTab(chromeTab) {
             loadMarkedTabs();
             document.getElementById('markCurrentTab').innerHTML = i18n.getString('marked');
             setTimeout(() => {
-                document.getElementById('markCurrentTab').innerHTML = i18n.getString('markThisTab');
+                document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
             }, 2000);
         });
     });
@@ -352,11 +352,21 @@ function addSettingsLink() {
         settingsLink = document.createElement('div');
         settingsLink.className = 'settings-link';
         settingsLink.style.textAlign = 'center';
-        settingsLink.style.marginTop = '10px';
-        settingsLink.style.fontSize = '12px';
-        settingsLink.style.color = '#2196F3';
+        settingsLink.style.marginTop = '16px';
+        settingsLink.style.padding = '8px 16px';
+        settingsLink.style.fontSize = '14px';
+        settingsLink.style.color = 'white';
+        settingsLink.style.background = 'linear-gradient(135deg, #6c757d 0%, #495057 100%)';
+        settingsLink.style.borderRadius = '8px';
         settingsLink.style.cursor = 'pointer';
-        settingsLink.style.textDecoration = 'underline';
+        settingsLink.style.textDecoration = 'none';
+        settingsLink.style.transition = 'all 0.3s ease';
+        settingsLink.style.display = 'inline-flex';
+        settingsLink.style.alignItems = 'center';
+        settingsLink.style.gap = '8px';
+        settingsLink.style.justifyContent = 'center';
+        settingsLink.style.width = '100%';
+        settingsLink.style.boxSizing = 'border-box';
         
         // Load language setting before setting the text
         chrome.storage.sync.get(['language'], function(result) {
@@ -365,7 +375,18 @@ function addSettingsLink() {
             } else {
                 i18n.resetLanguage();
             }
-            settingsLink.innerHTML = i18n.getString('settingsLink');
+            settingsLink.innerHTML = '⚙️ ' + i18n.getString('settingsLink');
+        });
+        
+        // Add hover effects
+        settingsLink.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 6px 20px rgba(108, 117, 125, 0.4)';
+        });
+        
+        settingsLink.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
         });
         
         // Add click event to open options page
@@ -419,7 +440,7 @@ function markAllTabs() {
         if (tabs.length === 0) {
             document.getElementById('markAllTabs').innerHTML = i18n.getString('noTabs');
             setTimeout(() => {
-                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
             }, 2000);
             return;
         }
@@ -468,7 +489,7 @@ function processNewTabs(chromeTabs, existingTabs) {
         document.getElementById('markAllTabs').innerHTML = i18n.getString('noNewTabs');
         setTimeout(() => {
             chrome.tabs.query({}, function(tabs) {
-                document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
             });
         }, 2000);
         return;
@@ -495,7 +516,7 @@ function processNewTabs(chromeTabs, existingTabs) {
             document.getElementById('markAllTabs').innerHTML = i18n.getString('quotaExceeded');
             setTimeout(() => {
                 chrome.tabs.query({}, function(tabs) {
-                    document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                    document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                 });
             }, 2000);
             return;
@@ -518,7 +539,7 @@ function processNewTabs(chromeTabs, existingTabs) {
                     document.getElementById('markAllTabs').innerHTML = errorMessage;
                     setTimeout(() => {
                         chrome.tabs.query({}, function(tabs) {
-                            document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                            document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                         });
                     }, 3000);
                     return;
@@ -530,7 +551,7 @@ function processNewTabs(chromeTabs, existingTabs) {
                 document.getElementById('markAllTabs').innerHTML = newTabsCount + i18n.getString('markedTabs');
                 setTimeout(() => {
                     chrome.tabs.query({}, function(tabs) {
-                        document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                        document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                     });
                 }, 2000);
             });
@@ -539,7 +560,7 @@ function processNewTabs(chromeTabs, existingTabs) {
             document.getElementById('markAllTabs').innerHTML = i18n.getString('exception');
             setTimeout(() => {
                 chrome.tabs.query({}, function(tabs) {
-                    document.getElementById('markAllTabs').innerHTML = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                    document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                 });
             }, 2000);
         }

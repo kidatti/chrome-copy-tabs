@@ -30,5 +30,81 @@
   "markAllTabs": {
     "message": "All Tabs",
     "description": "Button to mark all tabs"
+  },
+  "folders": {
+    "message": "Folders",
+    "description": "Title for folders section"
+  },
+  "uncategorized": {
+    "message": "Uncategorized",
+    "description": "Name for uncategorized folder"
+  },
+  "addFolder": {
+    "message": "+ New Folder",
+    "description": "Button to add new folder"
+  },
+  "folderLabel": {
+    "message": "Folder:",
+    "description": "Label for folder selection"
+  },
+  "setDefault": {
+    "message": "Set as Default",
+    "description": "Tooltip for set default folder button"
+  },
+  "defaultFolderSet": {
+    "message": "Default Folder Set",
+    "description": "Tooltip when default folder is set"
+  },
+  "enterFolderName": {
+    "message": "Enter folder name:",
+    "description": "Prompt for folder name input"
+  },
+  "enterNewFolderName": {
+    "message": "Enter new folder name:",
+    "description": "Prompt for folder rename"
+  },
+  "deleteFolderConfirm": {
+    "message": "Delete this folder? Tabs in this folder will be moved to uncategorized.",
+    "description": "Confirmation message for folder deletion"
+  },
+  "noTabsInFolder": {
+    "message": "No tabs in this folder",
+    "description": "Message when folder has no tabs"
+  },
+  "cancel": {
+    "message": "Cancel",
+    "description": "Cancel button text"
+  },
+  "create": {
+    "message": "Create",
+    "description": "Create button text"
+  },
+  "change": {
+    "message": "Change",
+    "description": "Change button text"
+  },
+  "delete": {
+    "message": "Delete",
+    "description": "Delete button text"
+  },
+  "renameFolderTitle": {
+    "message": "Rename Folder",
+    "description": "Rename folder modal title"
+  },
+  "newFolderNameLabel": {
+    "message": "New folder name:",
+    "description": "New folder name label"
+  },
+  "deleteFolderTitle": {
+    "message": "Delete Folder",
+    "description": "Delete folder modal title"
+  },
+  "deleteFolderMessage": {
+    "message": "Delete this folder?",
+    "description": "Folder deletion confirmation message"
+  },
+  "deleteFolderWarning": {
+    "message": "Tabs in this folder will be moved to uncategorized.",
+    "description": "Folder deletion warning message"
   }
 } 

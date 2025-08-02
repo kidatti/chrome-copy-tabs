@@ -300,6 +300,46 @@
             content: "📚";
             font-size: 16px;
         }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .folder-select-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .folder-select-container label {
+            font-weight: 500;
+            color: #495057;
+        }
+        .folder-select-popup {
+            padding: 4px 6px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 12px;
+            background: white;
+            min-width: 80px;
+        }
+        .folder-select-popup:focus {
+            border-color: #dc2626;
+            outline: none;
+        }
+        .set-default-btn {
+            padding: 4px 6px !important;
+            background: #ffc107 !important;
+            min-height: 24px !important;
+            font-size: 12px !important;
+        }
+        .set-default-btn:hover {
+            background: #e0a800 !important;
+        }
+        .set-default-btn.active {
+            background: #28a745 !important;
+        }
     </style>
 </head>
 <body>
@@ -312,7 +352,16 @@
     <div id="message"></div>
     <div class="button-container">
         <div class="section mark-section">
-            <div class="section-title">Mark Tabs</div>
+            <div class="section-header">
+                <div class="section-title">Mark Tabs</div>
+                <div class="folder-select-container">
+                    <label for="folder-select" id="folder-label"></label>
+                    <select id="folder-select" class="folder-select-popup">
+                        <option value="null" id="uncategorized-option"></option>
+                    </select>
+                    <button id="set-default-folder" class="set-default-btn">📌</button>
+                </div>
+            </div>
             <div class="button-group">
                 <button id="markCurrentTab"><span class="icon-this-tab"></span>This Tab</button>
                 <button id="markAllTabs"><span class="icon-all-tabs"></span>All Tabs</button>

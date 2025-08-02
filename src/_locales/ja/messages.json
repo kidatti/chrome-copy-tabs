@@ -30,5 +30,81 @@
   "markAllTabs": {
     "message": "すべてのタブ",
     "description": "すべてのタブをマークするボタン"
+  },
+  "folders": {
+    "message": "フォルダ",
+    "description": "フォルダセクションのタイトル"
+  },
+  "uncategorized": {
+    "message": "未分類",
+    "description": "未分類フォルダの名前"
+  },
+  "addFolder": {
+    "message": "+ 新しいフォルダ",
+    "description": "新しいフォルダを追加するボタン"
+  },
+  "folderLabel": {
+    "message": "フォルダ:",
+    "description": "フォルダ選択のラベル"
+  },
+  "setDefault": {
+    "message": "デフォルトに設定",
+    "description": "デフォルトフォルダに設定するボタンのツールチップ"
+  },
+  "defaultFolderSet": {
+    "message": "デフォルトフォルダ設定済み",
+    "description": "デフォルトフォルダが設定済みの場合のツールチップ"
+  },
+  "enterFolderName": {
+    "message": "フォルダ名を入力してください:",
+    "description": "フォルダ名入力のプロンプト"
+  },
+  "enterNewFolderName": {
+    "message": "新しいフォルダ名を入力してください:",
+    "description": "フォルダ名変更のプロンプト"
+  },
+  "deleteFolderConfirm": {
+    "message": "このフォルダを削除しますか？フォルダ内のタブは未分類に移動されます。",
+    "description": "フォルダ削除の確認メッセージ"
+  },
+  "noTabsInFolder": {
+    "message": "このフォルダにはタブがありません",
+    "description": "フォルダにタブがない場合のメッセージ"
+  },
+  "cancel": {
+    "message": "キャンセル",
+    "description": "キャンセルボタンのテキスト"
+  },
+  "create": {
+    "message": "作成",
+    "description": "作成ボタンのテキスト"
+  },
+  "change": {
+    "message": "変更",
+    "description": "変更ボタンのテキスト"
+  },
+  "delete": {
+    "message": "削除",
+    "description": "削除ボタンのテキスト"
+  },
+  "renameFolderTitle": {
+    "message": "フォルダ名変更",
+    "description": "フォルダ名変更モーダルのタイトル"
+  },
+  "newFolderNameLabel": {
+    "message": "新しいフォルダ名:",
+    "description": "新しいフォルダ名のラベル"
+  },
+  "deleteFolderTitle": {
+    "message": "フォルダ削除",
+    "description": "フォルダ削除モーダルのタイトル"
+  },
+  "deleteFolderMessage": {
+    "message": "このフォルダを削除しますか？",
+    "description": "フォルダ削除の確認メッセージ"
+  },
+  "deleteFolderWarning": {
+    "message": "フォルダ内のタブは未分類に移動されます。",
+    "description": "フォルダ削除時の警告メッセージ"
   }
 } 

@@ -77,6 +77,17 @@ document.addEventListener("DOMContentLoaded", function(){
         
         // Add settings link
         addSettingsLink();
+        
+        // Initialize folder UI texts
+        initializeFolderUI();
+        
+        // Load folders for popup
+        loadFoldersForPopup();
+        loadDefaultFolder();
+        
+        // Add folder select event listeners
+        document.getElementById('folder-select').addEventListener('change', onFolderSelectChange);
+        document.getElementById('set-default-folder').addEventListener('click', setDefaultFolder);
     });
 });
 
@@ -168,12 +179,17 @@ function markCurrentTab() {
 
 // Helper function to add a new tab
 function addNewTab(chromeTab) {
+    // Get selected folder from popup
+    const selectedFolderId = document.getElementById('folder-select').value;
+    const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
+    
     const tab = {
         id: Date.now(),
         title: chromeTab.title,
         url: chromeTab.url,
         timestamp: new Date().toISOString(),
-        locked: false
+        locked: false,
+        folderId: folderId
     };
     
     chrome.storage.sync.get(['dataKeys'], function(result) {
@@ -478,6 +494,10 @@ function markAllTabs() {
 
 // Helper function to process new tabs
 function processNewTabs(chromeTabs, existingTabs) {
+    // Get selected folder from popup
+    const selectedFolderId = document.getElementById('folder-select').value;
+    const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
+    
     // Create a set of existing URLs for quick lookup
     const existingUrls = new Set(existingTabs.map(tab => tab.url));
     
@@ -491,7 +511,8 @@ function processNewTabs(chromeTabs, existingTabs) {
                 title: tab.title,
                 url: tab.url,
                 timestamp: new Date().toISOString(),
-                locked: false
+                locked: false,
+                folderId: folderId
             };
             newTabs.push(tabData);
             existingUrls.add(tab.url);
@@ -607,7 +628,7 @@ function exportHtmlCurrentTab() {
         }, function(results) {
             if (chrome.runtime.lastError) {
                 console.error("Error executing script:", chrome.runtime.lastError);
-                showMessage(chrome.runtime.lastError.message, 'error');
+                showMessage(chrome.runtime.lastError.message || 'Script execution failed', 'error');
                 return;
             }
 
@@ -644,7 +665,7 @@ function exportHtmlArticleCurrentTab() {
         }, () => {
             if (chrome.runtime.lastError) {
                 console.error('Error injecting readability.js:', chrome.runtime.lastError);
-                showMessage(chrome.runtime.lastError.message, 'error');
+                showMessage(chrome.runtime.lastError.message || 'Failed to inject readability.js', 'error');
                 return;
             }
 
@@ -655,7 +676,7 @@ function exportHtmlArticleCurrentTab() {
             }, (results) => {
                 if (chrome.runtime.lastError) {
                     console.error('Error executing script:', chrome.runtime.lastError);
-                    showMessage(chrome.runtime.lastError.message, 'error');
+                    showMessage(chrome.runtime.lastError.message || 'Script execution failed', 'error');
                     return;
                 }
 
@@ -766,7 +787,7 @@ function exportMarkdownCurrentTab() {
         }, () => {
             if (chrome.runtime.lastError) {
                 console.error('Error injecting readability.js:', chrome.runtime.lastError);
-                showMessage(chrome.runtime.lastError.message, 'error');
+                showMessage(chrome.runtime.lastError.message || 'Failed to inject readability.js', 'error');
                 return;
             }
 
@@ -777,7 +798,7 @@ function exportMarkdownCurrentTab() {
             }, (results) => {
                 if (chrome.runtime.lastError) {
                     console.error('Error executing script:', chrome.runtime.lastError);
-                    showMessage(chrome.runtime.lastError.message, 'error');
+                    showMessage(chrome.runtime.lastError.message || 'Script execution failed', 'error');
                     return;
                 }
 
@@ -909,4 +930,86 @@ function extractAndConvertToMarkdown() {
         console.error('Error in extractAndConvertToMarkdown:', error);
         return null;
     }
+}
+
+// Initialize folder UI texts
+function initializeFolderUI() {
+    document.getElementById('folder-label').textContent = i18n.getString('folderLabel');
+    document.getElementById('uncategorized-option').textContent = i18n.getString('uncategorized');
+    document.getElementById('set-default-folder').title = i18n.getString('setDefault');
+}
+
+// Load folders for popup
+function loadFoldersForPopup() {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const folderSelect = document.getElementById('folder-select');
+        
+        // Clear existing options except the first one
+        folderSelect.innerHTML = `<option value="null">${i18n.getString('uncategorized')}</option>`;
+        
+        // Add folder options
+        folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder.id;
+            option.textContent = folder.name;
+            folderSelect.appendChild(option);
+        });
+    });
+}
+
+// Load default folder setting
+function loadDefaultFolder() {
+    chrome.storage.sync.get(['defaultFolderId'], function(result) {
+        const defaultFolderId = result.defaultFolderId;
+        const folderSelect = document.getElementById('folder-select');
+        const setDefaultBtn = document.getElementById('set-default-folder');
+        
+        if (defaultFolderId !== undefined) {
+            folderSelect.value = defaultFolderId || 'null';
+            if (defaultFolderId) {
+                setDefaultBtn.classList.add('active');
+                setDefaultBtn.title = i18n.getString('defaultFolderSet');
+            }
+        }
+    });
+}
+
+// Handle folder selection change
+function onFolderSelectChange() {
+    const selectedFolderId = document.getElementById('folder-select').value;
+    const setDefaultBtn = document.getElementById('set-default-folder');
+    
+    // Update default button state
+    chrome.storage.sync.get(['defaultFolderId'], function(result) {
+        const currentDefault = result.defaultFolderId;
+        const newFolderId = selectedFolderId === 'null' ? null : selectedFolderId;
+        
+        if (currentDefault === newFolderId) {
+            setDefaultBtn.classList.add('active');
+            setDefaultBtn.title = i18n.getString('defaultFolderSet');
+        } else {
+            setDefaultBtn.classList.remove('active');
+            setDefaultBtn.title = i18n.getString('setDefault');
+        }
+    });
+}
+
+// Set default folder
+function setDefaultFolder() {
+    const selectedFolderId = document.getElementById('folder-select').value;
+    const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
+    const setDefaultBtn = document.getElementById('set-default-folder');
+    
+    chrome.storage.sync.set({ defaultFolderId: folderId }, function() {
+        setDefaultBtn.classList.add('active');
+        setDefaultBtn.title = i18n.getString('defaultFolderSet');
+        
+        // Show confirmation
+        const originalText = setDefaultBtn.innerHTML;
+        setDefaultBtn.innerHTML = '✓';
+        setTimeout(() => {
+            setDefaultBtn.innerHTML = originalText;
+        }, 1000);
+    });
 }

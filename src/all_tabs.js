@@ -1,3 +1,7 @@
+let currentFolderId = null;
+let currentRenameFolderId = null;
+let currentDeleteFolderId = null;
+
 document.addEventListener("DOMContentLoaded", function() {
     // Wait for i18n object to be loaded
     if (typeof i18n === 'undefined') {
@@ -9,7 +13,27 @@ document.addEventListener("DOMContentLoaded", function() {
     document.title = i18n.getString('pageTitle');
     document.getElementById('page-title').textContent = i18n.getString('pageTitle');
     
-    // Load marked tabs
+    // Set folder-related UI text
+    document.getElementById('folders-title').textContent = i18n.getString('folders');
+    document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
+    document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
+    
+    // Set modal UI text
+    initializeModalTexts();
+    
+    // Initialize folder management
+    initializeFolderManagement();
+    
+    // Initialize modal functionality
+    initializeModals();
+    
+    // Add click event for uncategorized folder
+    document.querySelector('[data-folder-id="null"]').addEventListener('click', function() {
+        selectFolder(null);
+    });
+    
+    // Load folders and tabs
+    loadFolders();
     loadAllMarkedTabs();
 });
 
@@ -51,12 +75,387 @@ function migrateFromMarkedTabs() {
     });
 }
 
+// Initialize modal texts
+function initializeModalTexts() {
+    // Add Folder Modal
+    document.getElementById('add-folder-title').textContent = i18n.getString('addFolder');
+    document.getElementById('folder-name-label').textContent = i18n.getString('folderLabel');
+    document.getElementById('folder-name-input').placeholder = i18n.getString('enterFolderName');
+    document.getElementById('add-folder-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
+    document.getElementById('add-folder-confirm').textContent = i18n.getString('create') || '作成';
+    
+    // Rename Folder Modal
+    document.getElementById('rename-folder-title').textContent = i18n.getString('renameFolderTitle') || 'フォルダ名変更';
+    document.getElementById('rename-folder-label').textContent = i18n.getString('newFolderNameLabel') || '新しいフォルダ名:';
+    document.getElementById('rename-folder-input').placeholder = i18n.getString('enterNewFolderName');
+    document.getElementById('rename-folder-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
+    document.getElementById('rename-folder-confirm').textContent = i18n.getString('change') || '変更';
+    
+    // Delete Folder Modal
+    document.getElementById('delete-folder-title').textContent = i18n.getString('deleteFolderTitle') || 'フォルダ削除';
+    document.getElementById('delete-folder-message').textContent = i18n.getString('deleteFolderMessage') || 'このフォルダを削除しますか？';
+    document.getElementById('delete-folder-warning').textContent = i18n.getString('deleteFolderWarning') || 'フォルダ内のタブは未分類に移動されます。';
+    document.getElementById('delete-folder-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
+    document.getElementById('delete-folder-confirm').textContent = i18n.getString('delete') || '削除';
+}
+
+// Initialize folder management
+function initializeFolderManagement() {
+    document.getElementById('add-folder-btn').addEventListener('click', showAddFolderModal);
+}
+
+// Initialize modal functionality
+function initializeModals() {
+    const overlay = document.getElementById('modal-overlay');
+    
+    // Close modal when clicking overlay
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeAllModals();
+        }
+    });
+    
+    // Close modal buttons
+    document.querySelectorAll('.modal-close').forEach(button => {
+        button.addEventListener('click', closeAllModals);
+    });
+    
+    // Cancel buttons
+    document.getElementById('add-folder-cancel').addEventListener('click', closeAllModals);
+    document.getElementById('rename-folder-cancel').addEventListener('click', closeAllModals);
+    document.getElementById('delete-folder-cancel').addEventListener('click', closeAllModals);
+    
+    // Confirm buttons
+    document.getElementById('add-folder-confirm').addEventListener('click', confirmAddFolder);
+    document.getElementById('rename-folder-confirm').addEventListener('click', confirmRenameFolder);
+    document.getElementById('delete-folder-confirm').addEventListener('click', confirmDeleteFolder);
+    
+    // ESC key to close modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAllModals();
+        }
+    });
+    
+    // Enter key to confirm in input modals
+    document.getElementById('folder-name-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            confirmAddFolder();
+        }
+    });
+    
+    document.getElementById('rename-folder-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            confirmRenameFolder();
+        }
+    });
+}
+
+// Modal control functions
+function showModal(modalId) {
+    document.getElementById('modal-overlay').classList.add('show');
+    document.getElementById(modalId).classList.add('show');
+}
+
+function closeAllModals() {
+    document.getElementById('modal-overlay').classList.remove('show');
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.remove('show');
+    });
+    
+    // Clear input fields
+    document.getElementById('folder-name-input').value = '';
+    document.getElementById('rename-folder-input').value = '';
+    
+    // Reset any stored data
+    currentRenameFolderId = null;
+    currentDeleteFolderId = null;
+}
+
+// Migrate data to include folder support
+function migrateToFolderSupport() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['dataKeys'], function(result) {
+            const dataKeys = result.dataKeys || [];
+            
+            if (dataKeys.length === 0) {
+                resolve();
+                return;
+            }
+
+            chrome.storage.sync.get(dataKeys, function(tabsData) {
+                const updateData = {};
+                let hasUpdates = false;
+
+                dataKeys.forEach(key => {
+                    const tab = tabsData[key];
+                    if (tab && !tab.hasOwnProperty('folderId')) {
+                        tab.folderId = null;
+                        updateData[key] = tab;
+                        hasUpdates = true;
+                    }
+                });
+
+                if (hasUpdates) {
+                    chrome.storage.sync.set(updateData, function() {
+                        console.log("Migration completed: added folderId to existing tabs");
+                        resolve();
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        });
+    });
+}
+
+// Load folders
+function loadFolders() {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const folderList = document.getElementById('folder-list');
+        
+        // Clear existing folders (except "未分類")
+        const uncategorized = folderList.querySelector('[data-folder-id="null"]');
+        folderList.innerHTML = '';
+        folderList.appendChild(uncategorized);
+        
+        // Add folders
+        folders.forEach(folder => {
+            const folderElement = createFolderElement(folder);
+            folderList.appendChild(folderElement);
+        });
+        
+        updateFolderCounts();
+    });
+}
+
+// Create folder element
+function createFolderElement(folder) {
+    const folderElement = document.createElement('div');
+    folderElement.className = 'folder-item';
+    folderElement.setAttribute('data-folder-id', folder.id);
+    
+    folderElement.innerHTML = `
+        <div class="folder-name">${folder.name}</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="folder-count">0</div>
+            <div class="folder-actions">
+                <button class="folder-btn rename-folder-btn" data-folder-id="${folder.id}">✏️</button>
+                <button class="folder-btn delete-folder-btn" data-folder-id="${folder.id}">🗑️</button>
+            </div>
+        </div>
+    `;
+    
+    folderElement.addEventListener('click', function() {
+        selectFolder(folder.id);
+    });
+    
+    // Add event listeners for rename and delete buttons
+    const renameBtn = folderElement.querySelector('.rename-folder-btn');
+    const deleteBtn = folderElement.querySelector('.delete-folder-btn');
+    
+    renameBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        renameFolderDialog(folder.id);
+    });
+    
+    deleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        deleteFolder(folder.id);
+    });
+    
+    return folderElement;
+}
+
+// Select folder
+function selectFolder(folderId) {
+    currentFolderId = folderId;
+    
+    // Update active state
+    document.querySelectorAll('.folder-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[data-folder-id="${folderId}"]`).classList.add('active');
+    
+    // Reload tabs for selected folder
+    loadAllMarkedTabs();
+}
+
+// Show add folder modal
+function showAddFolderModal() {
+    showModal('add-folder-modal');
+    setTimeout(() => {
+        document.getElementById('folder-name-input').focus();
+    }, 100);
+}
+
+// Confirm add folder
+function confirmAddFolder() {
+    const name = document.getElementById('folder-name-input').value.trim();
+    if (name) {
+        addFolder(name);
+        closeAllModals();
+    }
+}
+
+// Add new folder
+function addFolder(name) {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const newFolder = {
+            id: Date.now().toString(),
+            name: name
+        };
+        
+        folders.push(newFolder);
+        
+        chrome.storage.sync.set({ folders: folders }, function() {
+            loadFolders();
+        });
+    });
+}
+
+// Show rename folder modal
+function renameFolderDialog(folderId) {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const folder = folders.find(f => f.id === folderId);
+        
+        if (folder) {
+            currentRenameFolderId = folderId;
+            document.getElementById('rename-folder-input').value = folder.name;
+            showModal('rename-folder-modal');
+            setTimeout(() => {
+                const input = document.getElementById('rename-folder-input');
+                input.focus();
+                input.select();
+            }, 100);
+        }
+    });
+}
+
+// Confirm rename folder
+function confirmRenameFolder() {
+    const newName = document.getElementById('rename-folder-input').value.trim();
+    if (newName && currentRenameFolderId) {
+        renameFolder(currentRenameFolderId, newName);
+        closeAllModals();
+    }
+}
+
+// Rename folder
+function renameFolder(folderId, newName) {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const folderIndex = folders.findIndex(f => f.id === folderId);
+        
+        if (folderIndex !== -1) {
+            folders[folderIndex].name = newName;
+            
+            chrome.storage.sync.set({ folders: folders }, function() {
+                loadFolders();
+            });
+        }
+    });
+}
+
+// Show delete folder modal
+function deleteFolder(folderId) {
+    currentDeleteFolderId = folderId;
+    showModal('delete-folder-modal');
+}
+
+// Confirm delete folder
+function confirmDeleteFolder() {
+    if (currentDeleteFolderId) {
+        performDeleteFolder(currentDeleteFolderId);
+        closeAllModals();
+    }
+}
+
+// Perform folder deletion
+function performDeleteFolder(folderId) {
+    chrome.storage.sync.get(['folders', 'dataKeys'], function(result) {
+        const folders = result.folders || [];
+        const dataKeys = result.dataKeys || [];
+        
+        // Remove folder from folders list
+        const updatedFolders = folders.filter(f => f.id !== folderId);
+        
+        // Move tabs in this folder to uncategorized
+        if (dataKeys.length > 0) {
+            chrome.storage.sync.get(dataKeys, function(tabsData) {
+                const updateData = { folders: updatedFolders };
+                
+                dataKeys.forEach(key => {
+                    const tab = tabsData[key];
+                    if (tab && tab.folderId === folderId) {
+                        tab.folderId = null;
+                        updateData[key] = tab;
+                    }
+                });
+                
+                chrome.storage.sync.set(updateData, function() {
+                    loadFolders();
+                    if (currentFolderId === folderId) {
+                        selectFolder(null);
+                    }
+                });
+            });
+        } else {
+            chrome.storage.sync.set({ folders: updatedFolders }, function() {
+                loadFolders();
+            });
+        }
+    });
+}
+
+// Update folder counts
+function updateFolderCounts() {
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+        
+        if (dataKeys.length === 0) {
+            // Set all counts to 0
+            document.querySelectorAll('.folder-count').forEach(el => {
+                el.textContent = '0';
+            });
+            return;
+        }
+        
+        chrome.storage.sync.get(dataKeys, function(tabsData) {
+            const folderCounts = {};
+            
+            dataKeys.forEach(key => {
+                const tab = tabsData[key];
+                if (tab) {
+                    const folderId = tab.folderId || 'null';
+                    folderCounts[folderId] = (folderCounts[folderId] || 0) + 1;
+                }
+            });
+            
+            // Update counts in UI
+            document.querySelectorAll('.folder-item').forEach(item => {
+                const folderId = item.getAttribute('data-folder-id');
+                const count = folderCounts[folderId] || 0;
+                const countElement = item.querySelector('.folder-count');
+                if (countElement) {
+                    countElement.textContent = count;
+                }
+            });
+        });
+    });
+}
+
 function loadAllMarkedTabs() {
     const tabList = document.getElementById('tab-list');
     tabList.innerHTML = '';
     
-    // Check for and migrate old format if needed
+    // Check for and migrate old format and folder support
     migrateFromMarkedTabs().then(() => {
+        return migrateToFolderSupport();
+    }).then(() => {
         chrome.storage.sync.get(['dataKeys'], function(result) {
             const dataKeys = result.dataKeys || [];
             
@@ -76,15 +475,29 @@ function loadAllMarkedTabs() {
                 document.getElementById('open-options').addEventListener('click', function() {
                     chrome.runtime.openOptionsPage();
                 });
+                updateFolderCounts();
                 return;
             }
             
             // Get all tab data using the dataKeys
             chrome.storage.sync.get(dataKeys, function(tabsData) {
-                const allTabs = dataKeys.map(key => tabsData[key]);
+                let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
+                
+                // Filter tabs by current folder
+                if (currentFolderId !== null) {
+                    allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
+                } else {
+                    allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
+                }
                 
                 // Sort tabs by timestamp (newest first)
                 allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                if (allTabs.length === 0) {
+                    tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
+                    updateFolderCounts();
+                    return;
+                }
                 
                 allTabs.forEach(tab => {
                     const tabElement = document.createElement('div');
@@ -100,11 +513,16 @@ function loadAllMarkedTabs() {
                             <div class="tab-url">${tab.url}</div>
                             <div class="tab-date">${i18n.getString('markDateTime')}: ${formattedDate}</div>
                         </div>
-                        <img class="lock-icon ${tab.locked ? 'locked' : ''}" 
-                             src="images/${tab.locked ? 'lock' : 'unlock'}.svg" 
-                             alt="${tab.locked ? 'Locked' : 'Unlocked'}"
-                             data-id="${tab.id}">
-                        <button class="delete-btn" data-id="${tab.id}" ${tab.locked ? 'style="display: none;"' : ''}>${i18n.getString('deleteButton')}</button>
+                        <div class="tab-controls">
+                            <select class="folder-select" data-id="${tab.id}">
+                                <option value="null">未分類</option>
+                            </select>
+                            <img class="lock-icon ${tab.locked ? 'locked' : ''}" 
+                                 src="images/${tab.locked ? 'lock' : 'unlock'}.svg" 
+                                 alt="${tab.locked ? 'Locked' : 'Unlocked'}"
+                                 data-id="${tab.id}">
+                            <button class="delete-btn" data-id="${tab.id}" ${tab.locked ? 'style="display: none;"' : ''}>${i18n.getString('deleteButton')}</button>
+                        </div>
                     `;
                     
                     // Add click event to open the tab
@@ -120,18 +538,28 @@ function loadAllMarkedTabs() {
                     // Add lock toggle functionality
                     const lockIcon = tabElement.querySelector('.lock-icon');
                     lockIcon.addEventListener('click', function(e) {
-                        e.stopPropagation(); // Prevent triggering the tab open when clicking lock
+                        e.stopPropagation();
                         toggleLock(tab.id);
                     });
                     
                     const deleteBtn = tabElement.querySelector('.delete-btn');
                     deleteBtn.addEventListener('click', function(e) {
-                        e.stopPropagation(); // Prevent triggering the tab open when clicking delete
+                        e.stopPropagation();
                         deleteTab(tab.id);
+                    });
+                    
+                    // Add folder select functionality
+                    const folderSelect = tabElement.querySelector('.folder-select');
+                    populateFolderSelect(folderSelect, tab.folderId);
+                    folderSelect.addEventListener('change', function(e) {
+                        e.stopPropagation();
+                        moveTabToFolder(tab.id, this.value === 'null' ? null : this.value);
                     });
                     
                     tabList.appendChild(tabElement);
                 });
+                
+                updateFolderCounts();
             });
         });
     });
@@ -162,6 +590,54 @@ function deleteTab(tabId) {
                 chrome.storage.sync.set(updateData, function() {
                     loadAllMarkedTabs();
                 });
+            });
+        });
+    });
+}
+
+// Populate folder select dropdown
+function populateFolderSelect(selectElement, currentFolderId) {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        
+        // Clear existing options except the first one (未分類)
+        selectElement.innerHTML = `<option value="null">${i18n.getString('uncategorized')}</option>`;
+        
+        // Add folder options
+        folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder.id;
+            option.textContent = folder.name;
+            selectElement.appendChild(option);
+        });
+        
+        // Set current value
+        selectElement.value = currentFolderId || 'null';
+    });
+}
+
+// Move tab to folder
+function moveTabToFolder(tabId, folderId) {
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+        
+        chrome.storage.sync.get(dataKeys, function(tabsData) {
+            const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
+            
+            if (!keyToUpdate) {
+                return;
+            }
+            
+            const tab = tabsData[keyToUpdate];
+            tab.folderId = folderId;
+            
+            chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
+                updateFolderCounts();
+                // If moving from current folder, reload tabs
+                if (currentFolderId === tab.folderId || 
+                    (currentFolderId === null && !tab.folderId)) {
+                    loadAllMarkedTabs();
+                }
             });
         });
     });

@@ -21,6 +21,20 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             min-height: calc(100vh - 48px);
             box-sizing: border-box;
+            display: flex;
+            gap: 24px;
+        }
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            height: fit-content;
+        }
+        .main-content {
+            flex: 1;
+            min-width: 0;
         }
         .tab-list {
             display: flex;
@@ -114,15 +128,313 @@
             margin: 0;
             font-weight: 600;
         }
+        .folder-list {
+            margin-bottom: 20px;
+        }
+        .folder-item {
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .folder-item:hover {
+            background: #e9ecef;
+        }
+        .folder-item.active {
+            background: #007bff;
+            color: white;
+        }
+        .folder-name {
+            font-weight: 500;
+        }
+        .folder-count {
+            background: rgba(0,0,0,0.1);
+            color: #6c757d;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .folder-item.active .folder-count {
+            color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.2);
+        }
+        .folder-actions {
+            display: none;
+            gap: 4px;
+        }
+        .folder-item:hover .folder-actions {
+            display: flex;
+        }
+        .folder-btn {
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .folder-btn:hover {
+            background: rgba(0,0,0,0.1);
+        }
+        .add-folder-btn {
+            width: 100%;
+            padding: 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .add-folder-btn:hover {
+            background: #218838;
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .tab-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .folder-select {
+            padding: 4px 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 12px;
+            background: white;
+            cursor: pointer;
+        }
+        .folder-select:hover {
+            border-color: #007bff;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            min-width: 400px;
+            max-width: 500px;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        .modal.show {
+            display: block;
+        }
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-content {
+            padding: 0;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px 16px 24px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-body {
+            padding: 20px 24px;
+        }
+        .modal-body label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+        .modal-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        .modal-body p {
+            margin: 0 0 8px 0;
+            color: #495057;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px 20px 24px;
+            border-top: 1px solid #e9ecef;
+        }
+        .modal-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .modal-btn.cancel {
+            background: #f8f9fa;
+            color: #6c757d;
+            border-color: #dee2e6;
+        }
+        .modal-btn.cancel:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        .modal-btn.confirm {
+            background: #007bff;
+            color: white;
+        }
+        .modal-btn.confirm:hover {
+            background: #0056b3;
+        }
+        .modal-btn.danger {
+            background: #dc3545;
+            color: white;
+        }
+        .modal-btn.danger:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="page-header">
-            <h1 id="page-title">Marked Tabs</h1>
+        <div class="sidebar">
+            <div class="sidebar-title" id="folders-title"></div>
+            <button class="add-folder-btn" id="add-folder-btn"></button>
+            <div class="folder-list" id="folder-list">
+                <div class="folder-item active" data-folder-id="null">
+                    <div class="folder-name" id="uncategorized-name"></div>
+                    <div class="folder-count" id="uncategorized-count">0</div>
+                </div>
+            </div>
         </div>
-        <div id="tab-list" class="tab-list"></div>
+        <div class="main-content">
+            <div class="page-header">
+                <h1 id="page-title">Marked Tabs</h1>
+            </div>
+            <div id="tab-list" class="tab-list"></div>
+        </div>
     </div>
+    
+    <!-- Modal dialogs -->
+    <div id="modal-overlay" class="modal-overlay">
+        <!-- Add Folder Modal -->
+        <div id="add-folder-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="add-folder-title">新しいフォルダ</h3>
+                    <button class="modal-close" data-modal="add-folder-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <label for="folder-name-input" id="folder-name-label">フォルダ名:</label>
+                    <input type="text" id="folder-name-input" class="modal-input" placeholder="フォルダ名を入力">
+                </div>
+                <div class="modal-footer">
+                    <button id="add-folder-cancel" class="modal-btn cancel">キャンセル</button>
+                    <button id="add-folder-confirm" class="modal-btn confirm">作成</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rename Folder Modal -->
+        <div id="rename-folder-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="rename-folder-title">フォルダ名変更</h3>
+                    <button class="modal-close" data-modal="rename-folder-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <label for="rename-folder-input" id="rename-folder-label">新しいフォルダ名:</label>
+                    <input type="text" id="rename-folder-input" class="modal-input" placeholder="新しいフォルダ名を入力">
+                </div>
+                <div class="modal-footer">
+                    <button id="rename-folder-cancel" class="modal-btn cancel">キャンセル</button>
+                    <button id="rename-folder-confirm" class="modal-btn confirm">変更</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Folder Modal -->
+        <div id="delete-folder-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="delete-folder-title">フォルダ削除</h3>
+                    <button class="modal-close" data-modal="delete-folder-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="delete-folder-message">このフォルダを削除しますか？</p>
+                    <p id="delete-folder-warning">フォルダ内のタブは未分類に移動されます。</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="delete-folder-cancel" class="modal-btn cancel">キャンセル</button>
+                    <button id="delete-folder-confirm" class="modal-btn confirm danger">削除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="i18n.js"></script>
     <script src="all_tabs.js"></script>
 </body>

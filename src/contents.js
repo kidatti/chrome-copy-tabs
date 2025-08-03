@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function(){
     });
 });
 
-// Listen for storage changes to update language
+// Listen for storage changes to update language and folders
 chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'sync' && changes.language) {
         console.log('Popup: Language setting changed to:', changes.language.newValue);
@@ -113,6 +113,11 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         
         // Reload marked tabs to update any displayed text
         loadMarkedTabs();
+    }
+    
+    // Listen for folder changes and update folder select
+    if (namespace === 'sync' && changes.folders) {
+        loadFoldersForPopup();
     }
 });
 

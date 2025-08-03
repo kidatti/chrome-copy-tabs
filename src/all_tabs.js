@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function() {
     loadAllMarkedTabs();
 });
 
-// Listen for storage changes to update language
+// Listen for storage changes to update language and folders
 chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'sync' && changes.language) {
         console.log('All_tabs: Language setting changed to:', changes.language.newValue);
@@ -75,6 +75,11 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         
         // Reload tabs to update any displayed text
         loadAllMarkedTabs();
+    }
+    
+    // Listen for folder changes and update all folder selects
+    if (namespace === 'sync' && changes.folders) {
+        updateAllFolderSelects();
     }
 });
 
@@ -468,16 +473,46 @@ function performDeleteFolder(folderId) {
                 
                 chrome.storage.sync.set(updateData, function() {
                     loadFolders();
+                    updateAllFolderSelectsAfterDeletion(folderId);
                     if (currentFolderId === folderId) {
                         selectFolder(null);
+                    } else {
+                        // If currently viewing uncategorized folder and tabs were moved to it, reload
+                        if (currentFolderId === null) {
+                            loadAllMarkedTabs();
+                        }
                     }
                 });
             });
         } else {
             chrome.storage.sync.set({ folders: updatedFolders }, function() {
                 loadFolders();
+                updateAllFolderSelectsAfterDeletion(folderId);
+                if (currentFolderId === folderId) {
+                    selectFolder(null);
+                }
             });
         }
+    });
+}
+
+// Update all folder select dropdowns
+function updateAllFolderSelects() {
+    const folderSelects = document.querySelectorAll('.folder-select');
+    folderSelects.forEach(select => {
+        const currentValue = select.value;
+        populateFolderSelect(select, currentValue);
+    });
+}
+
+// Update all folder select dropdowns after folder deletion
+function updateAllFolderSelectsAfterDeletion(deletedFolderId) {
+    const folderSelects = document.querySelectorAll('.folder-select');
+    folderSelects.forEach(select => {
+        const currentValue = select.value;
+        // If the current value is the deleted folder, set to null (uncategorized)
+        const newValue = currentValue === deletedFolderId ? null : currentValue;
+        populateFolderSelect(select, newValue);
     });
 }
 

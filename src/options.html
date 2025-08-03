@@ -10,84 +10,202 @@
             margin: 0;
             padding: 20px;
             color: #333;
+            font-size: 16px;
+            line-height: 1.6;
         }
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
             background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         h1 {
             margin-top: 0;
             color: #2196F3;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 15px;
+            font-size: 28px;
+        }
+        h2 {
+            color: #2196F3;
+            font-size: 22px;
+            margin-top: 20px;
+            margin-bottom: 20px;
             padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        h2:first-of-type {
+            margin-top: 10px;
+        }
+        h3 {
+            color: #2196F3;
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e9ecef;
         }
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 18px;
+            color: #555;
         }
         select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background-color: #fff;
+        }
+        select:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
         }
         button {
             background-color: #2196F3;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 15px 25px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            min-width: 140px;
+            box-sizing: border-box;
+            height: auto;
+            margin-right: 15px;
+            margin-bottom: 10px;
         }
         button:hover {
             background-color: #0b7dda;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+        }
+        .button-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-right: 15px;
+            margin-bottom: 10px;
+            min-width: 140px;
+            box-sizing: border-box;
+            height: auto;
+        }
+        .button-secondary:hover {
+            background-color: #545b62;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+        }
+        .button-danger {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            min-width: 140px;
+            box-sizing: border-box;
+            height: auto;
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+        .button-danger:hover {
+            background-color: #c82333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+        .file-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            background-color: #fff;
+        }
+        .file-input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
         }
         .status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 8px;
             display: none;
+            font-size: 16px;
+            font-weight: 500;
         }
         .success {
             background-color: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
+            border: 2px solid #c3e6cb;
         }
         .error {
             background-color: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
+            border: 2px solid #f5c6cb;
+        }
+        .section {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
         }
         #storage-display {
-            margin-top: 30px;
-            border-top: 1px solid #e0e0e0;
-            padding-top: 20px;
+            margin-top: 40px;
+            border-top: 2px solid #e0e0e0;
+            padding-top: 30px;
         }
         #storage-json {
             background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            font-family: monospace;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             white-space: pre-wrap;
             word-break: break-all;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.4;
         }
-        h2 {
-            color: #2196F3;
-            font-size: 1.2em;
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .button-group .button-secondary,
+        .button-group .button-danger {
+            margin-right: 0;
+            margin-bottom: 0;
+        }
+        .description {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 15px;
+            line-height: 1.5;
         }
         
         /* Header styles */
@@ -122,6 +240,70 @@
             background: rgba(33, 150, 243, 0.2);
             transform: scale(1.05);
         }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal {
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+            display: none;
+            z-index: 1001;
+        }
+        .modal.show {
+            display: block;
+            transform: scale(1);
+        }
+        .modal:not(.show) {
+            display: none !important;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 20px;
+            text-align: center;
+        }
+        .modal-content p {
+            margin-bottom: 25px;
+            color: #666;
+            line-height: 1.5;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .modal-buttons button {
+            margin: 0;
+            min-width: 100px;
+        }
     </style>
 </head>
 <body>
@@ -132,23 +314,75 @@
                 <span>🗂️</span>
             </div>
         </div>
-        <div class="form-group">
-            <label for="language-select" id="language-label">Language:</label>
-            <select id="language-select">
-                <option value="auto" id="auto-option">Auto (Based on browser)</option>
-                <option value="ja" id="ja-option">日本語</option>
-                <option value="en" id="en-option">English</option>
-            </select>
+        <!-- Language Settings Section -->
+        <div class="section">
+            <h2 id="language-section-title">🌐 Language Settings</h2>
+            <div class="form-group">
+                <select id="language-select">
+                    <option value="auto" id="auto-option">Auto (Based on browser)</option>
+                    <option value="ja" id="ja-option">日本語</option>
+                    <option value="en" id="en-option">English</option>
+                </select>
+            </div>
+            <button id="save-button">💾 Save Settings</button>
+            <div id="language-status" class="status"></div>
         </div>
-        <button id="save-button">Save</button>
-        <div id="status" class="status"></div>
         
-        <div id="storage-display">
-            <h2 id="storage-contents-title">Storage Contents</h2>
-            <div id="storage-json"></div>
-            <button id="refresh-storage-button" style="margin-top: 10px;">Refresh</button>
+        <!-- Data Management Section -->
+        <div class="section">
+            <h2 id="data-management-title">📁 Data Management</h2>
+            <div id="data-status" class="status"></div>
+            
+            <div class="form-group">
+                <label id="export-label">📤 Export Data:</label>
+                <p class="description" id="export-description">Download all your data as a JSON backup file.</p>
+                <button id="export-button" class="button-secondary">📥 Export JSON</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="import-file" id="import-label">📥 Import Data:</label>
+                <input type="file" id="import-file" class="file-input" accept=".json">
+                <button id="import-button" class="button-secondary">📤 Import JSON</button>
+            </div>
+            
+            <div class="form-group" style="margin-top: 30px;">
+                <h3 id="storage-contents-title">🔍 Storage Contents</h3>
+                <div id="storage-json"></div>
+                <div class="button-group" style="margin-top: 15px;">
+                    <button id="refresh-storage-button" class="button-secondary">🔄 Refresh Data</button>
+                    <button id="clear-data-button" class="button-danger">🗑️ Clear All Data</button>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay">
+        <!-- Clear Data Confirmation Modal -->
+        <div id="clear-data-modal" class="modal">
+            <div class="modal-content">
+                <h3 id="clear-data-title">🗑️ Clear All Data</h3>
+                <p id="clear-data-message">DELETE: This will permanently delete all your data. Are you sure?</p>
+                <div class="modal-buttons">
+                    <button id="clear-data-cancel" class="button-secondary">Cancel</button>
+                    <button id="clear-data-confirm" class="button-danger">Delete All</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Import Data Confirmation Modal -->
+        <div id="import-data-modal" class="modal">
+            <div class="modal-content">
+                <h3 id="import-data-title">📥 Import Data</h3>
+                <p id="import-data-message">IMPORT: This will replace all current data. Are you sure?</p>
+                <div class="modal-buttons">
+                    <button id="import-data-cancel" class="button-secondary">Cancel</button>
+                    <button id="import-data-confirm" class="button-secondary">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="i18n.js"></script>
     <script src="options.js"></script>
 </body>

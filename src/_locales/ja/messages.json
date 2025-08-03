@@ -106,5 +106,121 @@
   "deleteFolderWarning": {
     "message": "フォルダ内のタブは未分類に移動されます。",
     "description": "フォルダ削除時の警告メッセージ"
+  },
+  "settingsTitle": {
+    "message": "CopyTabs 設定",
+    "description": "設定ページのタイトル"
+  },
+  "languageSettings": {
+    "message": "言語設定",
+    "description": "言語設定セクションのタイトル"
+  },
+  "languageLabel": {
+    "message": "言語:",
+    "description": "言語選択のラベル"
+  },
+  "languageAuto": {
+    "message": "自動 (ブラウザに従う)",
+    "description": "自動言語選択のオプション"
+  },
+  "languageJapanese": {
+    "message": "日本語",
+    "description": "日本語選択のオプション"
+  },
+  "languageEnglish": {
+    "message": "English",
+    "description": "英語選択のオプション"
+  },
+  "saveButton": {
+    "message": "保存",
+    "description": "保存ボタンのテキスト"
+  },
+  "dataManagement": {
+    "message": "データ管理",
+    "description": "データ管理セクションのタイトル"
+  },
+  "dataManagementDescription": {
+    "message": "拡張機能のデータをバックアップ、復元、削除できます。",
+    "description": "データ管理セクションの説明"
+  },
+  "exportData": {
+    "message": "データエクスポート",
+    "description": "データエクスポートのラベル"
+  },
+  "exportDescription": {
+    "message": "すべてのデータをJSONバックアップファイルとしてダウンロードします。",
+    "description": "エクスポート機能の説明"
+  },
+  "exportJson": {
+    "message": "JSONエクスポート",
+    "description": "JSONエクスポートボタンのテキスト"
+  },
+  "importData": {
+    "message": "データインポート",
+    "description": "データインポートのラベル"
+  },
+  "importDescription": {
+    "message": "以前にエクスポートしたJSONファイルからデータを復元します。",
+    "description": "インポート機能の説明"
+  },
+  "importJson": {
+    "message": "JSONインポート",
+    "description": "JSONインポートボタンのテキスト"
+  },
+  "clearAllData": {
+    "message": "全データ削除",
+    "description": "全データ削除ボタンのテキスト"
+  },
+  "storageContents": {
+    "message": "ストレージ内容",
+    "description": "ストレージ内容セクションのタイトル"
+  },
+  "storageDescription": {
+    "message": "デバッグ用に保存されているすべてのデータをJSON形式で表示します。",
+    "description": "ストレージセクションの説明"
+  },
+  "refreshButton": {
+    "message": "更新",
+    "description": "更新ボタンのテキスト"
+  },
+  "settingsSaved": {
+    "message": "設定が保存されました",
+    "description": "設定保存成功メッセージ"
+  },
+  "exportSuccess": {
+    "message": "データのエクスポートが完了しました！",
+    "description": "エクスポート成功メッセージ"
+  },
+  "importSuccess": {
+    "message": "データのインポートが完了しました！",
+    "description": "インポート成功メッセージ"
+  },
+  "clearSuccess": {
+    "message": "すべてのデータが削除されました！",
+    "description": "データ削除成功メッセージ"
+  },
+  "selectFile": {
+    "message": "インポートするファイルを選択してください。",
+    "description": "ファイル選択エラーメッセージ"
+  },
+  "confirmImport": {
+    "message": "現在のデータがすべて置き換えられます。よろしいですか？",
+    "description": "インポート確認メッセージ"
+  },
+  "confirmClear": {
+    "message": "すべてのデータが完全に削除されます。よろしいですか？",
+    "description": "データ削除確認メッセージ"
+  },
+  "importError": {
+    "message": "インポートに失敗しました",
+    "description": "インポートエラーメッセージ"
+  },
+  "clearError": {
+    "message": "データの削除に失敗しました",
+    "description": "削除エラーメッセージ"
+  },
+  "invalidFile": {
+    "message": "無効なJSONファイル形式です。",
+    "description": "無効ファイルエラーメッセージ"
   }
 } 

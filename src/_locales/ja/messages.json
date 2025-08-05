@@ -4,7 +4,7 @@
     "description": "拡張機能の名前"
   },
   "description": {
-    "message": "開いてるタブの「タイトルとURL」をコピーしたり「HTML・Markdown」形式で内容をコピーできるツールです",
+    "message": "ブラウザのタブをブックマークのように保存、ページのタイトルとURLをコピー、ページをHTMLやマークダウンでエクスポートできます",
     "description": "拡張機能の説明"
   },
   "copyTabsTitle": {

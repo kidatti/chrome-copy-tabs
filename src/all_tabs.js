@@ -671,6 +671,9 @@ function loadAllMarkedTabs() {
 }
 
 function deleteTab(tabId) {
+    // Find and remove the tab element from DOM first
+    const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
+    
     chrome.storage.sync.get(['dataKeys'], function(result) {
         const dataKeys = result.dataKeys || [];
         
@@ -693,7 +696,19 @@ function deleteTab(tabId) {
             chrome.storage.sync.remove([keyToRemove], function() {
                 // Update the dataKeys array
                 chrome.storage.sync.set(updateData, function() {
-                    loadAllMarkedTabs();
+                    // Remove the tab element from DOM instead of reloading
+                    if (tabElement) {
+                        tabElement.remove();
+                    }
+                    
+                    // Update folder counts without full reload
+                    updateFolderCounts();
+                    
+                    // Check if tab list is empty and show no tabs message
+                    const tabList = document.getElementById('tab-list');
+                    if (tabList.children.length === 0) {
+                        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
+                    }
                 });
             });
         });
@@ -735,14 +750,32 @@ function moveTabToFolder(tabId, folderId) {
             }
             
             const tab = tabsData[keyToUpdate];
+            const oldFolderId = tab.folderId;
             tab.folderId = folderId;
             
             chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
+                // Update folder counts
                 updateFolderCounts();
-                // If moving from current folder, reload tabs
-                if (currentFolderId === tab.folderId || 
-                    (currentFolderId === null && !tab.folderId)) {
-                    loadAllMarkedTabs();
+                
+                // If the tab is moved out of the current folder, remove it from the view
+                const shouldRemoveFromView = (
+                    (currentFolderId === oldFolderId && currentFolderId !== folderId) ||
+                    (currentFolderId === null && oldFolderId === null && folderId !== null) ||
+                    (currentFolderId !== null && oldFolderId === null && currentFolderId !== folderId)
+                );
+                
+                if (shouldRemoveFromView) {
+                    // Find and remove the tab element from DOM
+                    const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
+                    if (tabElement) {
+                        tabElement.remove();
+                    }
+                    
+                    // Check if tab list is empty and show no tabs message
+                    const tabList = document.getElementById('tab-list');
+                    if (tabList.children.length === 0) {
+                        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
+                    }
                 }
             });
         });

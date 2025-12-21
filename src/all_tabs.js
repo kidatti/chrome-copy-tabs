@@ -8,14 +8,18 @@ document.addEventListener("DOMContentLoaded", function() {
         console.error('i18n object is not loaded');
         return;
     }
-    
+
     // Set page title (removed page-title element display)
-    
+
     // Set folder-related UI text
     document.getElementById('folders-title').textContent = i18n.getString('folders');
     document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
     document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
-    
+
+    // Set copy button texts
+    document.getElementById('copy-urls-btn').textContent = i18n.getString('copyUrls');
+    document.getElementById('copy-titles-urls-btn').textContent = i18n.getString('copyTitlesUrls');
+
     // Set modal UI text
     initializeModalTexts();
     
@@ -40,7 +44,11 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('settingsIcon').addEventListener('click', function() {
         chrome.runtime.openOptionsPage();
     });
-    
+
+    // Add click events for copy buttons
+    document.getElementById('copy-urls-btn').addEventListener('click', copyURLsOnly);
+    document.getElementById('copy-titles-urls-btn').addEventListener('click', copyTitlesAndURLs);
+
     // Load folders and tabs
     loadFolders();
     loadUncategorizedName();
@@ -66,7 +74,11 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         // Update folder-related UI text
         document.getElementById('folders-title').textContent = i18n.getString('folders');
         document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
-        
+
+        // Update copy button texts
+        document.getElementById('copy-urls-btn').textContent = i18n.getString('copyUrls');
+        document.getElementById('copy-titles-urls-btn').textContent = i18n.getString('copyTitlesUrls');
+
         // Update modal UI text
         initializeModalTexts();
         
@@ -82,6 +94,34 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         updateAllFolderSelects();
     }
 });
+
+// Function to clean up duplicate dataKeys
+function cleanupDuplicateDataKeys() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['dataKeys'], function(result) {
+            const dataKeys = result.dataKeys || [];
+            
+            if (dataKeys.length === 0) {
+                resolve();
+                return;
+            }
+            
+            // Remove duplicates from dataKeys
+            const uniqueDataKeys = [...new Set(dataKeys)];
+            
+            if (uniqueDataKeys.length !== dataKeys.length) {
+                console.log(`Found duplicate dataKeys. Cleaning up: ${dataKeys.length} -> ${uniqueDataKeys.length}`);
+                
+                chrome.storage.sync.set({ dataKeys: uniqueDataKeys }, function() {
+                    console.log("DataKeys cleaned up successfully");
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
+        });
+    });
+}
 
 // Function to migrate from old markedTabs format to new dataKeys format
 function migrateFromMarkedTabs() {
@@ -557,9 +597,11 @@ function loadAllMarkedTabs() {
     const tabList = document.getElementById('tab-list');
     tabList.innerHTML = '';
     
-    // Check for and migrate old format and folder support
+    // Check for and migrate old format and folder support, then cleanup duplicates
     migrateFromMarkedTabs().then(() => {
         return migrateToFolderSupport();
+    }).then(() => {
+        return cleanupDuplicateDataKeys();
     }).then(() => {
         chrome.storage.sync.get(['dataKeys'], function(result) {
             const dataKeys = result.dataKeys || [];
@@ -605,6 +647,11 @@ function loadAllMarkedTabs() {
                 }
                 
                 allTabs.forEach(tab => {
+                    // Ensure locked property exists for backward compatibility
+                    if (tab.locked === undefined) {
+                        tab.locked = false;
+                    }
+                    
                     const tabElement = document.createElement('div');
                     tabElement.className = 'tab-item';
                     
@@ -814,23 +861,104 @@ function loadUncategorizedName() {
 function toggleLock(tabId) {
     chrome.storage.sync.get(['dataKeys'], function(result) {
         const dataKeys = result.dataKeys || [];
-        
+
         // Find which key contains the tab with the given ID
         chrome.storage.sync.get(dataKeys, function(tabsData) {
             const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
-            
+
             if (!keyToUpdate) {
                 return;
             }
-            
+
             // Toggle the locked state
             const tab = tabsData[keyToUpdate];
             tab.locked = !tab.locked;
-            
-            // Update the storage
+
+            // Update the storage and save the locked state properly
             chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
+                if (chrome.runtime.lastError) {
+                    console.error("Error saving lock state:", chrome.runtime.lastError);
+                    return;
+                }
                 loadAllMarkedTabs();
             });
         });
+    });
+}
+
+// Get currently displayed tabs
+function getCurrentlyDisplayedTabs() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['dataKeys'], function(result) {
+            const dataKeys = result.dataKeys || [];
+
+            if (dataKeys.length === 0) {
+                resolve([]);
+                return;
+            }
+
+            // Get all tab data using the dataKeys
+            chrome.storage.sync.get(dataKeys, function(tabsData) {
+                let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
+
+                // Filter tabs by current folder
+                if (currentFolderId !== null) {
+                    allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
+                } else {
+                    allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
+                }
+
+                // Sort tabs by timestamp (newest first)
+                allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                resolve(allTabs);
+            });
+        });
+    });
+}
+
+// Copy URLs only
+function copyURLsOnly() {
+    getCurrentlyDisplayedTabs().then(tabs => {
+        if (tabs.length === 0) {
+            return;
+        }
+
+        const urls = tabs.map(tab => tab.url).join('\n');
+        const textarea = document.getElementById('copy-textarea');
+        textarea.value = urls;
+        textarea.select();
+        document.execCommand('copy');
+
+        // Show feedback
+        const btn = document.getElementById('copy-urls-btn');
+        const originalText = btn.textContent;
+        btn.textContent = i18n.getString('copied') || 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    });
+}
+
+// Copy titles and URLs
+function copyTitlesAndURLs() {
+    getCurrentlyDisplayedTabs().then(tabs => {
+        if (tabs.length === 0) {
+            return;
+        }
+
+        const content = tabs.map(tab => `${tab.title}\n${tab.url}`).join('\n\n');
+        const textarea = document.getElementById('copy-textarea');
+        textarea.value = content;
+        textarea.select();
+        document.execCommand('copy');
+
+        // Show feedback
+        const btn = document.getElementById('copy-titles-urls-btn');
+        const originalText = btn.textContent;
+        btn.textContent = i18n.getString('copied') || 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
     });
 }

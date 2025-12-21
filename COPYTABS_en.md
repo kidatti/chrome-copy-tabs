@@ -1,6 +1,18 @@
-Save browser tabs like bookmarks, copy page titles and URLs, and export pages in HTML or Markdown formats
+A tool to save web pages in folders like bookmarks.
+Copy page titles and URLs, and export pages in HTML or Markdown formats.
+
+You can save reference articles and pass the list to tools like Notebook LM.
 
 ## Main Features
+
+### Bookmark Function
+- Save current tab or all tabs in bulk (excluding duplicate URLs)
+- Copy saved lists as "URLs only" or "Titles and URLs"
+- Manage marked tabs:
+  - Organize with folders
+  - Display latest 5 tabs in popup
+  - Click to open, delete button to remove
+  - View all tabs in separate window
 
 ### Tab Copy Function
 - Copy title and URL of current tab or all tabs
@@ -8,14 +20,6 @@ Save browser tabs like bookmarks, copy page titles and URLs, and export pages in
   - HTML: Complete page HTML
   - HTML (Article): Article content using Readability
   - Markdown: Article content in Markdown format
-
-### Tab Bookmark Function
-- Save current tab or all tabs in bulk (excluding duplicate URLs)
-- Manage marked tabs:
-  - Organize with folders
-  - Display latest 5 tabs in popup
-  - Click to open, delete button to remove
-  - View all tabs in separate window
 
 ### Settings and Sync
 - Language: Japanese/English/Auto
@@ -28,6 +32,15 @@ Save browser tabs like bookmarks, copy page titles and URLs, and export pages in
 - Marked tabs are synchronized across devices linked to your Google Account
 
 # Change Log
+
+## v.0.9.0
+
+- Copy URLs and Titles & URLs for each folder
+- Design improvements
+
+## v.0.8.2
+
+- Bug fixes
 
 ## v.0.8.1
 

@@ -4,88 +4,100 @@
     <meta charset="UTF-8">
     <style>
         body {
-            width: 450px;
-            padding: 12px 16px 16px 16px;
+            width: 600px;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f5f5;
             color: #333;
             margin: 0;
         }
         .button-container {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 0;
             background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
         }
         .section {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e5e5;
         }
         .section-title {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 8px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        /* Primary save section */
+        .save-section {
+            background: #fff;
+            padding: 16px 20px;
+            border-bottom: 2px solid #e5e5e5;
+        }
+
+        /* Main action row - folder select + save button */
+        .main-action-row {
             display: flex;
+            gap: 12px;
             align-items: center;
-            gap: 8px;
+            margin-bottom: 12px;
         }
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 2px;
+
+        .folder-select-main {
+            flex: 1;
         }
-        
-        /* Section specific styling */
-        .copy-section .section-title {
-            color: #059669;
+        .folder-select-main select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
         }
-        .copy-section .section-title::before {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        .folder-select-main select:focus {
+            outline: none;
+            border-color: #4a90e2;
         }
-        
-        .mark-section .section-title {
-            color: #dc2626;
+
+        .main-action-row .btn-primary {
+            flex-shrink: 0;
+            min-width: 180px;
         }
-        .mark-section .section-title::before {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+
+        /* Current tab info display */
+        .current-tab-info {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
         }
-        
-        .export-section .section-title {
-            color: #7c3aed;
+        .current-tab-title {
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        .export-section .section-title::before {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        .current-tab-url {
+            font-size: 11px;
+            color: #6c757d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        
-        /* Section title icons */
-        .copy-section .section-title::after {
-            content: "📋";
-            font-size: 18px;
-            margin-left: auto;
-        }
-        
-        .mark-section .section-title::after {
-            content: "🔖";
-            font-size: 18px;
-            margin-left: auto;
-        }
-        
-        .export-section .section-title::after {
-            content: "💾";
-            font-size: 18px;
-            margin-left: auto;
-        }
+
         .button-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             justify-content: space-between;
         }
         .button-group button {
@@ -93,180 +105,100 @@
         }
         button {
             padding: 12px 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #4a90e2;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             min-height: 44px;
         }
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            background: #357abd;
         }
         button:active {
-            transform: translateY(0);
+            transform: scale(0.98);
         }
+
+        /* Primary button */
+        .btn-primary {
+            background: #4a90e2;
+            font-size: 16px;
+            min-height: 48px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: #357abd;
+        }
+
+        /* Secondary button */
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+            font-size: 14px;
+            min-height: 40px;
+            width: 100%;
+        }
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        /* Compact sections */
+        .compact-section {
+            background: #fafafa;
+        }
+        .compact-section .section-title {
+            font-size: 11px;
+        }
+
         #message {
-            margin-bottom: 16px;
-            padding: 8px;
-            border-radius: 4px;
+            padding: 10px 16px;
             text-align: center;
             display: none;
+            font-size: 13px;
             font-weight: 500;
         }
         .success {
-            background-color: #dff0d8;
-            color: #3c763d;
-            border: 1px solid #d6e9c6;
+            background-color: #d4edda;
+            color: #155724;
         }
         .error {
-            background-color: #f2dede;
-            color: #a94442;
-            border: 1px solid #ebccd1;
+            background-color: #f8d7da;
+            color: #721c24;
         }
         .hidden {
             position: absolute;
             top: -9999px;
             left: -9999px;
         }
-        .tab-list {
-            max-height: 400px;
-            overflow-y: auto;
-            margin-top: 16px;
-        }
-        .tab-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px;
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        .tab-info {
-            flex: 1;
-            margin-right: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .tab-info:hover {
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-        .tab-title {
-            font-size: 14px;
-            color: #333333;
-            margin-bottom: 4px;
-            word-break: break-all;
-        }
-        .tab-url {
-            font-size: 12px;
-            color: #666666;
-            word-break: break-all;
-        }
-        .delete-btn {
-            padding: 6px 12px;
-            background-color: #ff4444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .delete-btn:hover {
-            background-color: #ff0000;
-        }
-        .no-tabs {
-            text-align: center;
-            color: #666666;
-            padding: 20px;
-        }
-        .view-all-btn {
-            margin-top: 8px;
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-            color: white;
-            width: 100%;
-        }
-        .view-all-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
-        }
-        
-        /* Icon styles */
-        .icon {
-            width: 16px;
-            height: 16px;
-            display: inline-block;
-        }
-        
-        /* Button specific styling */
-        .copy-section button {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
-        }
-        .copy-section button:hover {
-            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
-        }
-        
-        .mark-section button {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-        }
-        .mark-section button:hover {
-            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-        }
-        
-        .export-section button {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
-        }
-        .export-section button:hover {
-            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-        }
 
-        /* SVG Icons */
-        .icon-copy::before {
-            content: "📋";
-            font-size: 16px;
-        }
-        .icon-mark::before {
-            content: "🔖";
-            font-size: 16px;
-        }
-        .icon-html::before {
-            content: "🌐";
-            font-size: 16px;
-        }
-        .icon-article::before {
-            content: "📄";
-            font-size: 16px;
-        }
-        .icon-markdown::before {
-            content: "📝";
-            font-size: 16px;
-        }
-        .icon-view::before {
-            content: "👀";
-            font-size: 16px;
-        }
-        
         /* Header styles */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            padding: 4px 0;
+            padding: 10px 16px;
+            background: white;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dev-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
         .settings-icon {
             display: flex;
@@ -274,94 +206,113 @@
             justify-content: center;
             width: 32px;
             height: 32px;
-            background: rgba(255, 255, 255, 0.2);
+            background: #f5f5f5;
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             font-size: 16px;
         }
         .settings-icon:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05) rotate(45deg);
+            background: #e5e5e5;
         }
         .view-all-container {
             display: flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255, 255, 255, 0.2);
+            background: #f5f5f5;
             border-radius: 6px;
             padding: 6px 10px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         .view-all-container:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
+            background: #e5e5e5;
         }
         .view-all-icon {
             font-size: 16px;
         }
         .tab-count {
-            color: white;
+            color: #333;
             font-size: 13px;
             font-weight: 600;
             min-width: 18px;
             text-align: center;
         }
-        .icon-this-tab::before {
-            content: "📑";
-            font-size: 16px;
-        }
-        .icon-all-tabs::before {
-            content: "📚";
-            font-size: 16px;
-        }
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .folder-select-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-        }
-        .folder-select-container label {
-            font-weight: 500;
-            color: #495057;
-        }
-        .folder-select-popup {
-            padding: 4px 6px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 12px;
+
+        /* Tab list styling */
+        .tab-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 12px 16px;
             background: white;
-            min-width: 80px;
         }
-        .folder-select-popup:focus {
-            border-color: #dc2626;
-            outline: none;
+        .tab-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
         }
-        .set-default-btn {
-            padding: 4px 6px !important;
-            background: #ffc107 !important;
-            min-height: 24px !important;
-            font-size: 12px !important;
+        .tab-item:hover {
+            background-color: #e9ecef;
+            border-color: #ced4da;
         }
-        .set-default-btn:hover {
-            background: #e0a800 !important;
+        .tab-info {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
         }
-        .set-default-btn.active {
-            background: #28a745 !important;
+        .tab-title {
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 4px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .tab-url {
+            font-size: 11px;
+            color: #6c757d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .delete-btn {
+            flex-shrink: 0;
+            padding: 6px 12px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-height: auto;
+            transition: all 0.2s ease;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+            transform: none;
+        }
+        .no-tabs {
+            text-align: center;
+            color: #6c757d;
+            padding: 20px;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="settings-icon" id="settingsIcon" title="Settings">
-            <span>⚙️</span>
+        <div class="header-left">
+            <div class="settings-icon" id="settingsIcon" title="Settings">
+                <span>⚙️</span>
+            </div>
+            <div class="dev-badge" id="devBadge" style="display: none;">DEV</div>
         </div>
         <div class="view-all-container" id="viewAllTabsIcon" title="View All Tabs">
             <div class="view-all-icon">🗂️</div>
@@ -370,35 +321,39 @@
     </div>
     <div id="message"></div>
     <div class="button-container">
-        <div class="section mark-section">
-            <div class="section-header">
-                <div class="section-title">Mark Tabs</div>
-                <div class="folder-select-container">
-                    <label for="folder-select" id="folder-label"></label>
-                    <select id="folder-select" class="folder-select-popup">
-                        <option value="null" id="uncategorized-option"></option>
+        <!-- Primary: Save This Tab Section -->
+        <div class="section save-section">
+            <div class="main-action-row">
+                <div class="folder-select-main">
+                    <select id="folder-select">
+                        <option value="null" id="uncategorized-option">Uncategorized</option>
                     </select>
-                    <button id="set-default-folder" class="set-default-btn">📌</button>
+                    <div class="current-tab-info">
+                        <div class="current-tab-title" id="current-tab-title">Loading...</div>
+                        <div class="current-tab-url" id="current-tab-url">Loading...</div>
+                    </div>
                 </div>
+                <button id="markCurrentTab" class="btn-primary">Save This Tab</button>
             </div>
+            <button id="markAllTabs" class="btn-secondary">Save All Tabs</button>
+        </div>
+
+        <!-- Secondary: Copy Section -->
+        <div class="section compact-section">
+            <div class="section-title" id="copy-section-title">Copy Title & URL</div>
             <div class="button-group">
-                <button id="markCurrentTab"><span class="icon-this-tab"></span>This Tab</button>
-                <button id="markAllTabs"><span class="icon-all-tabs"></span>All Tabs</button>
+                <button id="copyCurrentTab">This Tab</button>
+                <button id="copyAllTabs">All Tabs</button>
             </div>
         </div>
-        <div class="section copy-section">
-            <div class="section-title">Copy Title & URL</div>
+
+        <!-- Secondary: Export Section -->
+        <div class="section compact-section">
+            <div class="section-title" id="export-section-title">Export Tab Content</div>
             <div class="button-group">
-                <button id="copyCurrentTab"><span class="icon-this-tab"></span>This Tab</button>
-                <button id="copyAllTabs"><span class="icon-all-tabs"></span>All Tabs</button>
-            </div>
-        </div>
-        <div class="section export-section">
-            <div class="section-title">Export Tab Content</div>
-            <div class="button-group">
-                <button id="exportHtmlCurrentTab"><span class="icon-html"></span>HTML</button>
-                <button id="exportHtmlArticleCurrentTab"><span class="icon-article"></span>Article</button>
-                <button id="exportMarkdownCurrentTab"><span class="icon-markdown"></span>Markdown</button>
+                <button id="exportHtmlCurrentTab">HTML</button>
+                <button id="exportHtmlArticleCurrentTab">Article</button>
+                <button id="exportMarkdownCurrentTab">Markdown</button>
             </div>
         </div>
     </div>

@@ -24,12 +24,16 @@
     "description": "すべてのタブをコピーするボタン"
   },
   "markThisTab": {
-    "message": "このタブ",
+    "message": "タブを保存",
     "description": "現在のタブをマークするボタン"
   },
   "markAllTabs": {
-    "message": "すべてのタブ",
+    "message": "すべてのタブを保存",
     "description": "すべてのタブをマークするボタン"
+  },
+  "saveThisTabSection": {
+    "message": "タブを保存",
+    "description": "タブ保存セクションのタイトル"
   },
   "folders": {
     "message": "フォルダ",
@@ -222,5 +226,69 @@
   "invalidFile": {
     "message": "無効なJSONファイル形式です。",
     "description": "無効ファイルエラーメッセージ"
+  },
+  "copyTitleUrl": {
+    "message": "タイトル & URLをコピー",
+    "description": "タイトルとURLをコピーするセクションのタイトル"
+  },
+  "exportTabContent": {
+    "message": "タブの内容をエクスポート",
+    "description": "タブの内容をエクスポートするセクションのタイトル"
+  },
+  "copied": {
+    "message": "コピーしました！",
+    "description": "コピー後に表示されるメッセージ"
+  },
+  "marked": {
+    "message": "保存しました！",
+    "description": "タブを保存した後に表示されるメッセージ"
+  },
+  "alreadyMarked": {
+    "message": "保存済み",
+    "description": "タブが既に保存されている場合のメッセージ"
+  },
+  "noTabs": {
+    "message": "タブがありません",
+    "description": "タブがない場合のメッセージ"
+  },
+  "noNewTabs": {
+    "message": "新しいタブがありません",
+    "description": "保存する新しいタブがない場合のメッセージ"
+  },
+  "markedTabs": {
+    "message": " 個のタブを保存しました",
+    "description": "保存したタブの数を表示するメッセージ"
+  },
+  "quotaExceeded": {
+    "message": "ストレージ容量を超過しました",
+    "description": "ストレージ容量超過エラーメッセージ"
+  },
+  "dataTooLarge": {
+    "message": "データが大きすぎます",
+    "description": "データサイズ超過エラーメッセージ"
+  },
+  "error": {
+    "message": "エラー",
+    "description": "一般的なエラーメッセージ"
+  },
+  "exception": {
+    "message": "例外が発生しました",
+    "description": "例外発生時のメッセージ"
+  },
+  "failedToExtract": {
+    "message": "コンテンツの抽出に失敗しました",
+    "description": "コンテンツ抽出失敗時のメッセージ"
+  },
+  "noMarkedTabs": {
+    "message": "保存されたタブはまだありません",
+    "description": "保存されたタブがない場合のメッセージ"
+  },
+  "deleteButton": {
+    "message": "削除",
+    "description": "削除ボタンのテキスト"
+  },
+  "settingsLink": {
+    "message": "設定",
+    "description": "設定リンクのテキスト"
   }
 } 

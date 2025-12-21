@@ -4,12 +4,17 @@ const i18n = {
         // Button texts
         copyThisTab: "このタブ",
         copyAllTabs: "すべてのタブ",
-        markThisTab: "このタブ",
-        markAllTabs: "すべてのタブ",
+        markThisTab: "タブを保存",
+        markAllTabs: "すべてのタブを保存",
         viewAllTabs: "すべてのタブ",
         pageTitle: "マークされたタブ一覧",
         settingsLink: "設定を開く",
         deleteButton: "削除",
+
+        // Section titles
+        saveThisTabSection: "タブを保存",
+        copyTitleUrl: "タイトル & URLをコピー",
+        exportTabContent: "タブの内容をエクスポート",
         
         // Settings page
         settingsTitle: "CopyTabs 設定",
@@ -44,8 +49,8 @@ const i18n = {
         
         // Success messages
         copied: "コピーしました！",
-        marked: "マークしました！",
-        markedTabs: "個のタブをマークしました！",
+        marked: "保存しました！",
+        markedTabs: "個のタブを保存しました！",
         
         // Error messages
         error: "エラーが発生しました",
@@ -80,18 +85,27 @@ const i18n = {
         newFolderNameLabel: "新しいフォルダ名:",
         deleteFolderTitle: "フォルダ削除",
         deleteFolderMessage: "このフォルダを削除しますか？",
-        deleteFolderWarning: "フォルダ内のタブは未分類に移動されます。"
+        deleteFolderWarning: "フォルダ内のタブは未分類に移動されます。",
+
+        // Copy buttons
+        copyUrls: "URLをコピー",
+        copyTitlesUrls: "タイトル & URLをコピー"
     },
     en: {
         // Button texts
         copyThisTab: "This Tab",
         copyAllTabs: "All Tabs",
-        markThisTab: "This Tab",
-        markAllTabs: "All Tabs",
+        markThisTab: "Save This Tab",
+        markAllTabs: "Save All Tabs",
         viewAllTabs: "All Tabs",
         pageTitle: "Marked Tabs List",
         settingsLink: "Open Settings",
         deleteButton: "Delete",
+
+        // Section titles
+        saveThisTabSection: "Save This Tab",
+        copyTitleUrl: "Copy Title & URL",
+        exportTabContent: "Export Tab Content",
         
         // Settings page
         settingsTitle: "CopyTabs Settings",
@@ -126,8 +140,8 @@ const i18n = {
         
         // Success messages
         copied: "Copied!",
-        marked: "Marked!",
-        markedTabs: " tabs marked!",
+        marked: "Saved!",
+        markedTabs: " tabs saved!",
         
         // Error messages
         error: "An error occurred",
@@ -162,7 +176,11 @@ const i18n = {
         newFolderNameLabel: "New folder name:",
         deleteFolderTitle: "Delete Folder",
         deleteFolderMessage: "Delete this folder?",
-        deleteFolderWarning: "Tabs in this folder will be moved to uncategorized."
+        deleteFolderWarning: "Tabs in this folder will be moved to uncategorized.",
+
+        // Copy buttons
+        copyUrls: "Copy URLs",
+        copyTitlesUrls: "Copy Titles & URLs"
     },
     
     // Add getString method to i18n object

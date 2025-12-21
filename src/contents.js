@@ -12,13 +12,16 @@
 
 // Function to update UI elements with current language
 function updateUI() {
-    // Update button texts
-    document.getElementById('copyCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('copyThisTab');
-    document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs');
-    document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
-    document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs');
-    // Header icon doesn't need text update
-    
+    // Update section titles
+    document.getElementById('copy-section-title').textContent = i18n.getString('copyTitleUrl');
+    document.getElementById('export-section-title').textContent = i18n.getString('exportTabContent');
+
+    // Update button texts (simplified without icons)
+    document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
+    document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs');
+    document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs');
+
     // Update other UI elements as needed
     const settingsLink = document.querySelector('.settings-link');
     if (settingsLink) {
@@ -27,6 +30,17 @@ function updateUI() {
 }
 
 document.addEventListener("DOMContentLoaded", function(){
+    // Show development badge if loaded from local files (not from Chrome Web Store)
+    const manifestData = chrome.runtime.getManifest();
+    // Chrome Web Store extensions have 'update_url', local extensions don't
+    const isLocalDevelopment = !('update_url' in manifestData);
+    if (isLocalDevelopment) {
+        const devBadge = document.getElementById('devBadge');
+        if (devBadge) {
+            devBadge.style.display = 'block';
+        }
+    }
+
     // Load language setting first
     chrome.storage.sync.get(['language'], function(result) {
         console.log('Contents.js language setting:', result.language);
@@ -36,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function(){
             console.log('No language setting found, setting to auto');
             i18n.setLanguage('auto');
         }
-        
+
         // Update UI with current language
         updateUI();
         
@@ -55,6 +69,10 @@ document.addEventListener("DOMContentLoaded", function(){
             if (tabs[0]) {
                 document.getElementById('title').innerHTML = tabs[0].title;
                 document.getElementById('url').innerHTML = tabs[0].url;
+
+                // Update current tab info display
+                document.getElementById('current-tab-title').textContent = tabs[0].title;
+                document.getElementById('current-tab-url').textContent = tabs[0].url;
             }
         });
         
@@ -76,9 +94,8 @@ document.addEventListener("DOMContentLoaded", function(){
         loadFoldersForPopup();
         loadDefaultFolder();
         
-        // Add folder select event listeners
-        document.getElementById('folder-select').addEventListener('change', onFolderSelectChange);
-        document.getElementById('set-default-folder').addEventListener('click', setDefaultFolder);
+        // Add folder select event listener to save last selected folder
+        document.getElementById('folder-select').addEventListener('change', saveLastSelectedFolder);
     });
 });
 
@@ -124,8 +141,8 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 function count() {
     chrome.tabs.query({}, function(tabs) {
         const total = tabs.length;
-        document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs') + " (" + total + ")";;
-        document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + total + ")";
+        document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs') + " (" + total + ")";
+        document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + total + ")";
     });
 }
 
@@ -136,9 +153,9 @@ function getActiveTab() {
                 let text = tabs[0].title + "\n" + tabs[0].url;
                 document.getElementById('input').value = text;
                 copy();
-                document.getElementById('copyCurrentTab').innerHTML = i18n.getString('copied');
+                document.getElementById('copyCurrentTab').textContent = i18n.getString('copied');
                 setTimeout(() => {
-                    document.getElementById('copyCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('copyThisTab');
+                    document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
                 }, 2000);
             }
             resolve(tabs);
@@ -154,9 +171,9 @@ function getAllTabs() {
         });
         document.getElementById('input').value = text;
         copy();
-        document.getElementById('copyAllTabs').innerHTML = i18n.getString('copied');
+        document.getElementById('copyAllTabs').textContent = i18n.getString('copied');
         setTimeout(() => {
-            document.getElementById('copyAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('copyAllTabs') + " (" + tabs.length + ")";;
+            document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs') + " (" + tabs.length + ")";
         }, 2000);
     });
 }
@@ -170,34 +187,34 @@ function copy() {
 function markCurrentTab() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         if (tabs.length === 0) {
-            document.getElementById('markCurrentTab').innerHTML = i18n.getString('noTabs');
+            document.getElementById('markCurrentTab').textContent = i18n.getString('noTabs');
             setTimeout(() => {
-                document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
+                document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
             }, 2000);
             return;
         }
-        
+
         const currentUrl = tabs[0].url;
-        
+
         chrome.storage.sync.get(['dataKeys'], function(result) {
             const dataKeys = result.dataKeys || [];
-            
+
             if (dataKeys.length > 0) {
                 // Get all tab data using the dataKeys
                 chrome.storage.sync.get(dataKeys, function(tabsData) {
-                    const allTabs = dataKeys.map(key => tabsData[key]);
-                    
+                    const allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab != null);
+
                     // Check if the URL is already in marked tabs
-                    const isDuplicate = allTabs.some(tab => tab.url === currentUrl);
-                    
+                    const isDuplicate = allTabs.some(tab => tab && tab.url === currentUrl);
+
                     if (isDuplicate) {
-                        document.getElementById('markCurrentTab').innerHTML = i18n.getString('alreadyMarked');
+                        document.getElementById('markCurrentTab').textContent = i18n.getString('alreadyMarked');
                         setTimeout(() => {
-                            document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
+                            document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
                         }, 2000);
                         return;
                     }
-                    
+
                     addNewTab(tabs[0]);
                 });
             } else {
@@ -224,7 +241,13 @@ function addNewTab(chromeTab) {
     
     chrome.storage.sync.get(['dataKeys'], function(result) {
         const dataKeys = result.dataKeys || [];
-        const newKey = `mark-${dataKeys.length + 1}`;
+        // Generate a unique key that doesn't already exist
+        let counter = dataKeys.length + 1;
+        let newKey = `mark-${counter}`;
+        while (dataKeys.includes(newKey)) {
+            counter++;
+            newKey = `mark-${counter}`;
+        }
         const updatedKeys = [...dataKeys, newKey];
         
         // Create a storage update object
@@ -234,11 +257,41 @@ function addNewTab(chromeTab) {
         };
         
         chrome.storage.sync.set(updateData, function() {
+            // Immediately update the tab list
             loadMarkedTabs();
-            document.getElementById('markCurrentTab').innerHTML = i18n.getString('marked');
+
+            document.getElementById('markCurrentTab').textContent = i18n.getString('marked');
             setTimeout(() => {
-                document.getElementById('markCurrentTab').innerHTML = '<span class="icon-this-tab"></span>' + i18n.getString('markThisTab');
+                document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
             }, 2000);
+        });
+    });
+}
+
+// Function to clean up duplicate dataKeys
+function cleanupDuplicateDataKeys() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['dataKeys'], function(result) {
+            const dataKeys = result.dataKeys || [];
+            
+            if (dataKeys.length === 0) {
+                resolve();
+                return;
+            }
+            
+            // Remove duplicates from dataKeys
+            const uniqueDataKeys = [...new Set(dataKeys)];
+            
+            if (uniqueDataKeys.length !== dataKeys.length) {
+                console.log(`Found duplicate dataKeys. Cleaning up: ${dataKeys.length} -> ${uniqueDataKeys.length}`);
+                
+                chrome.storage.sync.set({ dataKeys: uniqueDataKeys }, function() {
+                    console.log("DataKeys cleaned up successfully");
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
         });
     });
 }
@@ -286,8 +339,10 @@ function loadMarkedTabs() {
     const tabList = document.getElementById('tab-list');
     tabList.innerHTML = '';
     
-    // Check for and migrate old format if needed
+    // Check for and migrate old format if needed, then cleanup duplicates
     migrateFromMarkedTabs().then(() => {
+        return cleanupDuplicateDataKeys();
+    }).then(() => {
         chrome.storage.sync.get(['dataKeys'], function(result) {
             const dataKeys = result.dataKeys || [];
             
@@ -299,7 +354,7 @@ function loadMarkedTabs() {
             
             // Get all tab data using the dataKeys
             chrome.storage.sync.get(dataKeys, function(tabsData) {
-                const allTabs = dataKeys.map(key => tabsData[key]);
+                const allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab != null);
                 
                 // Sort tabs by timestamp (newest first)
                 allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -308,6 +363,11 @@ function loadMarkedTabs() {
                 const tabsToShow = allTabs.slice(0, 5);
                 
                 tabsToShow.forEach(tab => {
+                    // Ensure locked property exists for backward compatibility
+                    if (tab.locked === undefined) {
+                        tab.locked = false;
+                    }
+                    
                     const tabElement = document.createElement('div');
                     tabElement.className = 'tab-item';
                     tabElement.innerHTML = `
@@ -438,20 +498,20 @@ function openAllTabsWindow() {
 function markAllTabs() {
     chrome.tabs.query({}, function(tabs) {
         if (tabs.length === 0) {
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('noTabs');
+            document.getElementById('markAllTabs').textContent = i18n.getString('noTabs');
             setTimeout(() => {
-                document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
             }, 2000);
             return;
         }
-        
+
         chrome.storage.sync.get(['dataKeys'], function(result) {
             const dataKeys = result.dataKeys || [];
-            
+
             // Get all existing tabs
             if (dataKeys.length > 0) {
                 chrome.storage.sync.get(dataKeys, function(tabsData) {
-                    const existingTabs = dataKeys.map(key => tabsData[key]);
+                    const existingTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab != null);
                     processNewTabs(tabs, existingTabs);
                 });
             } else {
@@ -468,7 +528,7 @@ function processNewTabs(chromeTabs, existingTabs) {
     const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
     
     // Create a set of existing URLs for quick lookup
-    const existingUrls = new Set(existingTabs.map(tab => tab.url));
+    const existingUrls = new Set(existingTabs.filter(tab => tab && tab.url).map(tab => tab.url));
     
     let newTabs = [];
     
@@ -489,12 +549,12 @@ function processNewTabs(chromeTabs, existingTabs) {
     });
     
     const newTabsCount = newTabs.length;
-    
+
     if (newTabsCount === 0) {
-        document.getElementById('markAllTabs').innerHTML = i18n.getString('noNewTabs');
+        document.getElementById('markAllTabs').textContent = i18n.getString('noNewTabs');
         setTimeout(() => {
             chrome.tabs.query({}, function(tabs) {
-                document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
             });
         }, 2000);
         return;
@@ -509,19 +569,25 @@ function processNewTabs(chromeTabs, existingTabs) {
         };
         
         newTabs.forEach((tab, index) => {
-            const newKey = `mark-${dataKeys.length + index + 1}`;
+            // Generate a unique key that doesn't already exist
+            let counter = dataKeys.length + index + 1;
+            let newKey = `mark-${counter}`;
+            while (updateData.dataKeys.includes(newKey)) {
+                counter++;
+                newKey = `mark-${counter}`;
+            }
             updateData.dataKeys.push(newKey);
             updateData[newKey] = tab;
         });
         
         // Check if we're approaching the storage limit
         const dataSize = JSON.stringify(updateData).length;
-        
+
         if (dataSize > 90000) { // Chrome sync storage limit is around 100KB
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('quotaExceeded');
+            document.getElementById('markAllTabs').textContent = i18n.getString('quotaExceeded');
             setTimeout(() => {
                 chrome.tabs.query({}, function(tabs) {
-                    document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                 });
             }, 2000);
             return;
@@ -540,32 +606,32 @@ function processNewTabs(chromeTabs, existingTabs) {
                     } else if (chrome.runtime.lastError.message.includes("QUOTA_BYTES")) {
                         errorMessage = i18n.getString('quotaExceeded');
                     }
-                    
-                    document.getElementById('markAllTabs').innerHTML = errorMessage;
+
+                    document.getElementById('markAllTabs').textContent = errorMessage;
                     setTimeout(() => {
                         chrome.tabs.query({}, function(tabs) {
-                            document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                         });
                     }, 3000);
                     return;
                 }
-                
-                // Force reload the marked tabs
+
+                // Immediately update the tab list
                 loadMarkedTabs();
-                
-                document.getElementById('markAllTabs').innerHTML = newTabsCount + i18n.getString('markedTabs');
+
+                document.getElementById('markAllTabs').textContent = newTabsCount + i18n.getString('markedTabs');
                 setTimeout(() => {
                     chrome.tabs.query({}, function(tabs) {
-                        document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                        document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                     });
                 }, 2000);
             });
         } catch (error) {
             console.error("Exception when saving to storage:", error);
-            document.getElementById('markAllTabs').innerHTML = i18n.getString('exception');
+            document.getElementById('markAllTabs').textContent = i18n.getString('exception');
             setTimeout(() => {
                 chrome.tabs.query({}, function(tabs) {
-                    document.getElementById('markAllTabs').innerHTML = '<span class="icon-all-tabs"></span>' + i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+                    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
                 });
             }, 2000);
         }
@@ -903,9 +969,7 @@ function extractAndConvertToMarkdown() {
 
 // Initialize folder UI texts
 function initializeFolderUI() {
-    document.getElementById('folder-label').textContent = i18n.getString('folderLabel');
     document.getElementById('uncategorized-option').textContent = i18n.getString('uncategorized');
-    document.getElementById('set-default-folder').title = i18n.getString('setDefault');
 }
 
 // Load folders for popup
@@ -928,58 +992,22 @@ function loadFoldersForPopup() {
     });
 }
 
-// Load default folder setting
+// Load last selected folder
 function loadDefaultFolder() {
-    chrome.storage.sync.get(['defaultFolderId'], function(result) {
-        const defaultFolderId = result.defaultFolderId;
+    chrome.storage.sync.get(['lastSelectedFolder'], function(result) {
+        const lastSelectedFolder = result.lastSelectedFolder;
         const folderSelect = document.getElementById('folder-select');
-        const setDefaultBtn = document.getElementById('set-default-folder');
-        
-        if (defaultFolderId !== undefined) {
-            folderSelect.value = defaultFolderId || 'null';
-            if (defaultFolderId) {
-                setDefaultBtn.classList.add('active');
-                setDefaultBtn.title = i18n.getString('defaultFolderSet');
-            }
+
+        if (lastSelectedFolder !== undefined) {
+            folderSelect.value = lastSelectedFolder || 'null';
         }
     });
 }
 
-// Handle folder selection change
-function onFolderSelectChange() {
-    const selectedFolderId = document.getElementById('folder-select').value;
-    const setDefaultBtn = document.getElementById('set-default-folder');
-    
-    // Update default button state
-    chrome.storage.sync.get(['defaultFolderId'], function(result) {
-        const currentDefault = result.defaultFolderId;
-        const newFolderId = selectedFolderId === 'null' ? null : selectedFolderId;
-        
-        if (currentDefault === newFolderId) {
-            setDefaultBtn.classList.add('active');
-            setDefaultBtn.title = i18n.getString('defaultFolderSet');
-        } else {
-            setDefaultBtn.classList.remove('active');
-            setDefaultBtn.title = i18n.getString('setDefault');
-        }
-    });
-}
-
-// Set default folder
-function setDefaultFolder() {
+// Save last selected folder when user changes selection
+function saveLastSelectedFolder() {
     const selectedFolderId = document.getElementById('folder-select').value;
     const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
-    const setDefaultBtn = document.getElementById('set-default-folder');
-    
-    chrome.storage.sync.set({ defaultFolderId: folderId }, function() {
-        setDefaultBtn.classList.add('active');
-        setDefaultBtn.title = i18n.getString('defaultFolderSet');
-        
-        // Show confirmation
-        const originalText = setDefaultBtn.innerHTML;
-        setDefaultBtn.innerHTML = '✓';
-        setTimeout(() => {
-            setDefaultBtn.innerHTML = originalText;
-        }, 1000);
-    });
+
+    chrome.storage.sync.set({ lastSelectedFolder: folderId });
 }

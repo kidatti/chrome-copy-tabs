@@ -24,12 +24,16 @@
     "description": "Button to copy all tabs"
   },
   "markThisTab": {
-    "message": "This Tab",
+    "message": "Save This Tab",
     "description": "Button to mark current tab"
   },
   "markAllTabs": {
-    "message": "All Tabs",
+    "message": "Save All Tabs",
     "description": "Button to mark all tabs"
+  },
+  "saveThisTabSection": {
+    "message": "Save This Tab",
+    "description": "Section title for saving tabs"
   },
   "folders": {
     "message": "Folders",
@@ -106,5 +110,69 @@
   "deleteFolderWarning": {
     "message": "Tabs in this folder will be moved to uncategorized.",
     "description": "Folder deletion warning message"
+  },
+  "copyTitleUrl": {
+    "message": "Copy Title & URL",
+    "description": "Section title for copy title and URL"
+  },
+  "exportTabContent": {
+    "message": "Export Tab Content",
+    "description": "Section title for export tab content"
+  },
+  "copied": {
+    "message": "Copied!",
+    "description": "Message shown after copying"
+  },
+  "marked": {
+    "message": "Saved!",
+    "description": "Message shown after saving a tab"
+  },
+  "alreadyMarked": {
+    "message": "Already Saved",
+    "description": "Message shown when tab is already saved"
+  },
+  "noTabs": {
+    "message": "No Tabs",
+    "description": "Message when there are no tabs"
+  },
+  "noNewTabs": {
+    "message": "No New Tabs",
+    "description": "Message when there are no new tabs to mark"
+  },
+  "markedTabs": {
+    "message": " tabs saved",
+    "description": "Message showing number of tabs saved"
+  },
+  "quotaExceeded": {
+    "message": "Storage quota exceeded",
+    "description": "Error message for storage quota exceeded"
+  },
+  "dataTooLarge": {
+    "message": "Data too large",
+    "description": "Error message for data too large"
+  },
+  "error": {
+    "message": "Error",
+    "description": "Generic error message"
+  },
+  "exception": {
+    "message": "Exception occurred",
+    "description": "Message for exceptions"
+  },
+  "failedToExtract": {
+    "message": "Failed to extract content",
+    "description": "Message when content extraction fails"
+  },
+  "noMarkedTabs": {
+    "message": "No saved tabs yet",
+    "description": "Message when there are no marked tabs"
+  },
+  "deleteButton": {
+    "message": "Delete",
+    "description": "Delete button text"
+  },
+  "settingsLink": {
+    "message": "Settings",
+    "description": "Settings link text"
   }
 } 

@@ -214,10 +214,17 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 16px;
         }
         .settings-icon:hover {
             background: #e5e5e5;
+        }
+        .settings-icon img {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s ease;
+        }
+        .settings-icon:hover img {
+            transform: rotate(45deg);
         }
         .view-all-container {
             display: flex;
@@ -233,7 +240,13 @@
             background: #e5e5e5;
         }
         .view-all-icon {
-            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .view-all-icon img {
+            width: 20px;
+            height: 20px;
         }
         .tab-count {
             color: #333;
@@ -314,12 +327,14 @@
     <div class="header">
         <div class="header-left">
             <div class="settings-icon" id="settingsIcon" title="Settings">
-                <span>⚙️</span>
+                <img src="images/settings.svg" alt="Settings">
             </div>
             <div class="dev-badge" id="devBadge" style="display: none;">DEV</div>
         </div>
         <div class="view-all-container" id="viewAllTabsIcon" title="View All Tabs">
-            <div class="view-all-icon">🗂️</div>
+            <div class="view-all-icon">
+                <img src="images/folder.svg" alt="All Tabs">
+            </div>
             <div class="tab-count" id="tabCount">0</div>
         </div>
     </div>

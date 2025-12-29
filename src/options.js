@@ -107,24 +107,24 @@ function updateLanguageUI() {
             
             // Language section
             const languageSettingsText = i18n.getString('languageSettings') || 'Language Settings';
-            document.getElementById('language-section-title').textContent = '🌐 ' + languageSettingsText;
+            document.getElementById('language-section-title').innerHTML = '<img src="images/language.svg" alt="">' + languageSettingsText;
             document.getElementById('auto-option').textContent = i18n.getString('languageAuto');
             document.getElementById('ja-option').textContent = i18n.getString('languageJapanese');
             document.getElementById('en-option').textContent = i18n.getString('languageEnglish');
-            document.getElementById('save-button').textContent = '💾 ' + i18n.getString('saveButton');
-            
+            document.getElementById('save-button').innerHTML = '<img src="images/save_white.svg" alt="">' + i18n.getString('saveButton');
+
             // Data management section
-            document.getElementById('data-management-title').textContent = '📁 ' + (i18n.getString('dataManagement') || 'Data Management');
-            document.getElementById('export-label').textContent = '📤 ' + (i18n.getString('exportData') || 'Export Data:');
+            document.getElementById('data-management-title').innerHTML = '<img src="images/folder_open.svg" alt="">' + (i18n.getString('dataManagement') || 'Data Management');
+            document.getElementById('export-label').innerHTML = '<img src="images/upload.svg" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">' + (i18n.getString('exportData') || 'Export Data:');
             document.getElementById('export-description').textContent = i18n.getString('exportDescription') || 'Download all your data as a JSON backup file.';
-            document.getElementById('export-button').textContent = '📥 ' + (i18n.getString('exportJson') || 'Export JSON');
-            document.getElementById('import-label').textContent = '📥 ' + (i18n.getString('importData') || 'Import Data:');
-            document.getElementById('import-button').textContent = '📤 ' + (i18n.getString('importJson') || 'Import JSON');
-            document.getElementById('clear-data-button').textContent = '🗑️ ' + (i18n.getString('clearAllData') || 'Clear All Data');
-            
+            document.getElementById('export-button').innerHTML = '<img src="images/download_white.svg" alt="">' + (i18n.getString('exportJson') || 'Export JSON');
+            document.getElementById('import-label').innerHTML = '<img src="images/download.svg" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">' + (i18n.getString('importData') || 'Import Data:');
+            document.getElementById('import-button').innerHTML = '<img src="images/upload_white.svg" alt="">' + (i18n.getString('importJson') || 'Import JSON');
+            document.getElementById('clear-data-button').innerHTML = '<img src="images/delete_white.svg" alt="">' + (i18n.getString('clearAllData') || 'Clear All Data');
+
             // Storage section
-            document.getElementById('storage-contents-title').textContent = '🔍 ' + i18n.getString('storageContents');
-            document.getElementById('refresh-storage-button').textContent = '🔄 ' + i18n.getString('refreshButton');
+            document.getElementById('storage-contents-title').innerHTML = '<img src="images/search.svg" alt="">' + i18n.getString('storageContents');
+            document.getElementById('refresh-storage-button').innerHTML = '<img src="images/refresh_white.svg" alt="">' + i18n.getString('refreshButton');
             
             // Update modal texts
             updateModalTexts();
@@ -215,12 +215,12 @@ function confirmImportData() {
 
 // Update modal texts with current language
 function updateModalTexts() {
-    document.getElementById('clear-data-title').textContent = '🗑️ ' + (i18n.getString('clearAllData') || 'Clear All Data');
+    document.getElementById('clear-data-title').innerHTML = '<img src="images/delete.svg" alt="">' + (i18n.getString('clearAllData') || 'Clear All Data');
     document.getElementById('clear-data-message').textContent = i18n.getString('confirmClear') || 'This will permanently delete all your data. Are you sure?';
     document.getElementById('clear-data-cancel').textContent = i18n.getString('cancel') || 'Cancel';
     document.getElementById('clear-data-confirm').textContent = i18n.getString('delete') || 'Delete All';
-    
-    document.getElementById('import-data-title').textContent = '📥 ' + (i18n.getString('importData') || 'Import Data');
+
+    document.getElementById('import-data-title').innerHTML = '<img src="images/download.svg" alt="">' + (i18n.getString('importData') || 'Import Data');
     document.getElementById('import-data-message').textContent = i18n.getString('confirmImport') || 'This will replace all current data. Are you sure?';
     document.getElementById('import-data-cancel').textContent = i18n.getString('cancel') || 'Cancel';
     document.getElementById('import-data-confirm').textContent = i18n.getString('importJson') || 'Import';

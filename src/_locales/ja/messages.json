@@ -290,5 +290,37 @@
   "settingsLink": {
     "message": "設定",
     "description": "設定リンクのテキスト"
+  },
+  "editTab": {
+    "message": "編集",
+    "description": "編集ボタンのテキスト"
+  },
+  "editTabTitle": {
+    "message": "タブ編集",
+    "description": "タブ編集モーダルのタイトル"
+  },
+  "tabTitleLabel": {
+    "message": "タイトル:",
+    "description": "タブタイトルのラベル"
+  },
+  "tabUrlLabel": {
+    "message": "URL:",
+    "description": "タブURLのラベル"
+  },
+  "save": {
+    "message": "保存",
+    "description": "保存ボタンのテキスト"
+  },
+  "copyUrls": {
+    "message": "URLをコピー",
+    "description": "URLコピーボタンのテキスト"
+  },
+  "copyTitlesUrls": {
+    "message": "タイトルとURLをコピー",
+    "description": "タイトルとURLコピーボタンのテキスト"
+  },
+  "markDateTime": {
+    "message": "保存日時",
+    "description": "保存日時のラベル"
   }
 } 

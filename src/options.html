@@ -14,7 +14,7 @@
             line-height: 1.6;
         }
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             background-color: #fff;
             padding: 30px;
@@ -64,6 +64,7 @@
             border-radius: 8px;
             font-size: 16px;
             background-color: #fff;
+            box-sizing: border-box;
         }
         select:focus {
             outline: none;
@@ -141,6 +142,8 @@
             font-size: 16px;
             margin-bottom: 15px;
             background-color: #fff;
+            box-sizing: border-box;
+            display: block;
         }
         .file-input:focus {
             outline: none;
@@ -232,13 +235,33 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 18px;
             text-decoration: none;
-            color: #2196F3;
         }
         .all-tabs-icon:hover {
             background: rgba(33, 150, 243, 0.2);
             transform: scale(1.05);
+        }
+        .all-tabs-icon img {
+            width: 24px;
+            height: 24px;
+        }
+        h2 img, h3 img {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        button img {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        label img {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 6px;
         }
         
         /* Modal Styles */
@@ -311,12 +334,12 @@
         <div class="header">
             <h1 id="settings-title">CopyTabs Settings</h1>
             <div class="all-tabs-icon" id="allTabsIcon" title="View All Tabs">
-                <span>🗂️</span>
+                <img src="images/folder.svg" alt="All Tabs">
             </div>
         </div>
         <!-- Language Settings Section -->
         <div class="section">
-            <h2 id="language-section-title">🌐 Language Settings</h2>
+            <h2 id="language-section-title"><img src="images/language.svg" alt="">Language Settings</h2>
             <div class="form-group">
                 <select id="language-select">
                     <option value="auto" id="auto-option">Auto (Based on browser)</option>
@@ -324,33 +347,33 @@
                     <option value="en" id="en-option">English</option>
                 </select>
             </div>
-            <button id="save-button">💾 Save Settings</button>
+            <button id="save-button"><img src="images/save_white.svg" alt="">Save Settings</button>
             <div id="language-status" class="status"></div>
         </div>
         
         <!-- Data Management Section -->
         <div class="section">
-            <h2 id="data-management-title">📁 Data Management</h2>
+            <h2 id="data-management-title"><img src="images/folder_open.svg" alt="">Data Management</h2>
             <div id="data-status" class="status"></div>
             
             <div class="form-group">
-                <label id="export-label">📤 Export Data:</label>
+                <label id="export-label"><img src="images/upload.svg" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">Export Data:</label>
                 <p class="description" id="export-description">Download all your data as a JSON backup file.</p>
-                <button id="export-button" class="button-secondary">📥 Export JSON</button>
+                <button id="export-button" class="button-secondary"><img src="images/download_white.svg" alt="">Export JSON</button>
             </div>
             
             <div class="form-group">
-                <label for="import-file" id="import-label">📥 Import Data:</label>
+                <label for="import-file" id="import-label"><img src="images/download.svg" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">Import Data:</label>
                 <input type="file" id="import-file" class="file-input" accept=".json">
-                <button id="import-button" class="button-secondary">📤 Import JSON</button>
+                <button id="import-button" class="button-secondary"><img src="images/upload_white.svg" alt="">Import JSON</button>
             </div>
             
             <div class="form-group" style="margin-top: 30px;">
-                <h3 id="storage-contents-title">🔍 Storage Contents</h3>
+                <h3 id="storage-contents-title"><img src="images/search.svg" alt="">Storage Contents</h3>
                 <div id="storage-json"></div>
                 <div class="button-group" style="margin-top: 15px;">
-                    <button id="refresh-storage-button" class="button-secondary">🔄 Refresh Data</button>
-                    <button id="clear-data-button" class="button-danger">🗑️ Clear All Data</button>
+                    <button id="refresh-storage-button" class="button-secondary"><img src="images/refresh_white.svg" alt="">Refresh Data</button>
+                    <button id="clear-data-button" class="button-danger"><img src="images/delete_white.svg" alt="">Clear All Data</button>
                 </div>
             </div>
         </div>
@@ -361,7 +384,7 @@
         <!-- Clear Data Confirmation Modal -->
         <div id="clear-data-modal" class="modal">
             <div class="modal-content">
-                <h3 id="clear-data-title">🗑️ Clear All Data</h3>
+                <h3 id="clear-data-title"><img src="images/delete.svg" alt="">Clear All Data</h3>
                 <p id="clear-data-message">DELETE: This will permanently delete all your data. Are you sure?</p>
                 <div class="modal-buttons">
                     <button id="clear-data-cancel" class="button-secondary">Cancel</button>
@@ -373,7 +396,7 @@
         <!-- Import Data Confirmation Modal -->
         <div id="import-data-modal" class="modal">
             <div class="modal-content">
-                <h3 id="import-data-title">📥 Import Data</h3>
+                <h3 id="import-data-title"><img src="images/download.svg" alt="">Import Data</h3>
                 <p id="import-data-message">IMPORT: This will replace all current data. Are you sure?</p>
                 <div class="modal-buttons">
                     <button id="import-data-cancel" class="button-secondary">Cancel</button>

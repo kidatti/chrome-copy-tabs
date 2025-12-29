@@ -1,6 +1,7 @@
 let currentFolderId = null;
 let currentRenameFolderId = null;
 let currentDeleteFolderId = null;
+let currentEditTabId = null;
 
 document.addEventListener("DOMContentLoaded", function() {
     // Wait for i18n object to be loaded
@@ -183,6 +184,13 @@ function initializeModalTexts() {
     document.getElementById('delete-folder-warning').textContent = i18n.getString('deleteFolderWarning') || 'フォルダ内のタブは未分類に移動されます。';
     document.getElementById('delete-folder-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
     document.getElementById('delete-folder-confirm').textContent = i18n.getString('delete') || '削除';
+
+    // Edit Tab Modal
+    document.getElementById('edit-tab-title').textContent = i18n.getString('editTabTitle') || 'タブ編集';
+    document.getElementById('tab-title-label').textContent = i18n.getString('tabTitleLabel') || 'タイトル:';
+    document.getElementById('tab-url-label').textContent = i18n.getString('tabUrlLabel') || 'URL:';
+    document.getElementById('edit-tab-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
+    document.getElementById('edit-tab-confirm').textContent = i18n.getString('save') || '保存';
 }
 
 // Initialize folder management
@@ -210,11 +218,13 @@ function initializeModals() {
     document.getElementById('add-folder-cancel').addEventListener('click', closeAllModals);
     document.getElementById('rename-folder-cancel').addEventListener('click', closeAllModals);
     document.getElementById('delete-folder-cancel').addEventListener('click', closeAllModals);
-    
+    document.getElementById('edit-tab-cancel').addEventListener('click', closeAllModals);
+
     // Confirm buttons
     document.getElementById('add-folder-confirm').addEventListener('click', confirmAddFolder);
     document.getElementById('rename-folder-confirm').addEventListener('click', confirmRenameFolder);
     document.getElementById('delete-folder-confirm').addEventListener('click', confirmDeleteFolder);
+    document.getElementById('edit-tab-confirm').addEventListener('click', confirmEditTab);
     
     // ESC key to close modals
     document.addEventListener('keydown', function(e) {
@@ -235,6 +245,18 @@ function initializeModals() {
             confirmRenameFolder();
         }
     });
+
+    document.getElementById('edit-tab-title-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            confirmEditTab();
+        }
+    });
+
+    document.getElementById('edit-tab-url-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            confirmEditTab();
+        }
+    });
 }
 
 // Modal control functions
@@ -252,10 +274,13 @@ function closeAllModals() {
     // Clear input fields
     document.getElementById('folder-name-input').value = '';
     document.getElementById('rename-folder-input').value = '';
-    
+    document.getElementById('edit-tab-title-input').value = '';
+    document.getElementById('edit-tab-url-input').value = '';
+
     // Reset any stored data
     currentRenameFolderId = null;
     currentDeleteFolderId = null;
+    currentEditTabId = null;
 }
 
 // Migrate data to include folder support
@@ -326,8 +351,12 @@ function createFolderElement(folder) {
         <div class="folder-name">${folder.name}</div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <div class="folder-actions">
-                <button class="folder-btn rename-folder-btn" data-folder-id="${folder.id}">✏️</button>
-                <button class="folder-btn delete-folder-btn" data-folder-id="${folder.id}">🗑️</button>
+                <button class="folder-btn rename-folder-btn" data-folder-id="${folder.id}">
+                    <img src="images/edit.svg" alt="Edit">
+                </button>
+                <button class="folder-btn delete-folder-btn" data-folder-id="${folder.id}">
+                    <img src="images/delete.svg" alt="Delete">
+                </button>
             </div>
             <div class="folder-count">0</div>
         </div>
@@ -663,17 +692,27 @@ function loadAllMarkedTabs() {
                         <div class="tab-info" data-url="${tab.url}">
                             <div class="tab-title">${tab.title}</div>
                             <div class="tab-url">${tab.url}</div>
-                            <div class="tab-date">${i18n.getString('markDateTime')}: ${formattedDate}</div>
+                            <div class="timestamp">${formattedDate}</div>
                         </div>
                         <div class="tab-controls">
                             <select class="folder-select" data-id="${tab.id}">
                                 <option value="null">未分類</option>
                             </select>
-                            <img class="lock-icon ${tab.locked ? 'locked' : ''}" 
-                                 src="images/${tab.locked ? 'lock' : 'unlock'}.svg" 
+                            <img class="lock-icon ${tab.locked ? 'locked' : ''}"
+                                 src="images/${tab.locked ? 'lock' : 'unlock'}.svg"
                                  alt="${tab.locked ? 'Locked' : 'Unlocked'}"
                                  data-id="${tab.id}">
-                            <button class="delete-btn" data-id="${tab.id}" ${tab.locked ? 'style="display: none;"' : ''}>${i18n.getString('deleteButton')}</button>
+                            <img class="edit-icon"
+                                 src="images/edit.svg"
+                                 alt="Edit"
+                                 title="${i18n.getString('editTab')}"
+                                 data-id="${tab.id}">
+                            <img class="delete-icon"
+                                 src="images/delete.svg"
+                                 alt="Delete"
+                                 title="${i18n.getString('deleteButton')}"
+                                 data-id="${tab.id}"
+                                 ${tab.locked ? 'style="display: none;"' : ''}>
                         </div>
                     `;
                     
@@ -694,12 +733,21 @@ function loadAllMarkedTabs() {
                         toggleLock(tab.id);
                     });
                     
-                    const deleteBtn = tabElement.querySelector('.delete-btn');
-                    deleteBtn.addEventListener('click', function(e) {
+                    // Add edit icon functionality
+                    const editIcon = tabElement.querySelector('.edit-icon');
+                    editIcon.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        deleteTab(tab.id);
+                        editTab(tab.id);
                     });
-                    
+
+                    const deleteIcon = tabElement.querySelector('.delete-icon');
+                    if (deleteIcon) {
+                        deleteIcon.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            deleteTab(tab.id);
+                        });
+                    }
+
                     // Add folder select functionality
                     const folderSelect = tabElement.querySelector('.folder-select');
                     populateFolderSelect(folderSelect, tab.folderId);
@@ -960,5 +1008,73 @@ function copyTitlesAndURLs() {
         setTimeout(() => {
             btn.textContent = originalText;
         }, 2000);
+    });
+}
+
+// Edit tab
+function editTab(tabId) {
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+
+        chrome.storage.sync.get(dataKeys, function(tabsData) {
+            const keyToEdit = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
+
+            if (!keyToEdit) {
+                return;
+            }
+
+            const tab = tabsData[keyToEdit];
+            currentEditTabId = tabId;
+
+            // Populate the modal with current values
+            document.getElementById('edit-tab-title-input').value = tab.title;
+            document.getElementById('edit-tab-url-input').value = tab.url;
+
+            // Show the modal
+            showModal('edit-tab-modal');
+            setTimeout(() => {
+                document.getElementById('edit-tab-title-input').focus();
+            }, 100);
+        });
+    });
+}
+
+// Confirm edit tab
+function confirmEditTab() {
+    if (!currentEditTabId) {
+        return;
+    }
+
+    const newTitle = document.getElementById('edit-tab-title-input').value.trim();
+    const newUrl = document.getElementById('edit-tab-url-input').value.trim();
+
+    if (!newTitle || !newUrl) {
+        return;
+    }
+
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+
+        chrome.storage.sync.get(dataKeys, function(tabsData) {
+            const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == currentEditTabId);
+
+            if (!keyToUpdate) {
+                return;
+            }
+
+            const tab = tabsData[keyToUpdate];
+            tab.title = newTitle;
+            tab.url = newUrl;
+
+            chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
+                if (chrome.runtime.lastError) {
+                    console.error("Error saving tab:", chrome.runtime.lastError);
+                    return;
+                }
+
+                closeAllModals();
+                loadAllMarkedTabs();
+            });
+        });
     });
 }

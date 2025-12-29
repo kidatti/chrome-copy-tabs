@@ -76,19 +76,7 @@
             color: #666666;
             word-break: break-all;
         }
-        .delete-btn {
-            padding: 8px 16px;
-            background-color: #ff4444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .delete-btn:hover {
-            background-color: #ff0000;
-        }
-        .lock-icon {
+        .lock-icon, .edit-icon, .delete-icon {
             width: 24px;
             height: 24px;
             margin-right: 12px;
@@ -96,8 +84,9 @@
             opacity: 0.6;
             transition: all 0.2s ease;
         }
-        .lock-icon:hover {
+        .lock-icon:hover, .edit-icon:hover, .delete-icon:hover {
             opacity: 1;
+            transform: scale(1.1);
         }
         .lock-icon.locked {
             opacity: 1;
@@ -199,13 +188,23 @@
         .folder-btn {
             background: none;
             border: none;
-            padding: 4px 8px;
+            padding: 4px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .folder-btn:hover {
             background: rgba(0,0,0,0.1);
+        }
+        .folder-btn img {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+        .folder-btn:hover img {
+            opacity: 1;
         }
         .add-folder-btn {
             width: 100%;
@@ -393,11 +392,18 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 18px;
         }
         .settings-icon:hover {
             background: rgba(102, 126, 234, 0.2);
-            transform: scale(1.05) rotate(45deg);
+            transform: scale(1.05);
+        }
+        .settings-icon img {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+        }
+        .settings-icon:hover img {
+            transform: rotate(45deg);
         }
     </style>
 </head>
@@ -411,7 +417,9 @@
                     <div class="folder-name" id="uncategorized-name"></div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <div class="folder-actions">
-                            <button class="folder-btn rename-uncategorized-btn" data-folder-id="null">✏️</button>
+                            <button class="folder-btn rename-uncategorized-btn" data-folder-id="null">
+                                <img src="images/edit.svg" alt="Edit">
+                            </button>
                         </div>
                         <div class="folder-count" id="uncategorized-count">0</div>
                     </div>
@@ -426,7 +434,7 @@
                         <button class="copy-btn" id="copy-titles-urls-btn"></button>
                     </div>
                     <div class="settings-icon" id="settingsIcon" title="Settings">
-                        <span>⚙️</span>
+                        <img src="images/settings.svg" alt="Settings">
                     </div>
                 </div>
             </div>
@@ -487,6 +495,27 @@
                 <div class="modal-footer">
                     <button id="delete-folder-cancel" class="modal-btn cancel">キャンセル</button>
                     <button id="delete-folder-confirm" class="modal-btn confirm danger">削除</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Tab Modal -->
+        <div id="edit-tab-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="edit-tab-title">タブ編集</h3>
+                    <button class="modal-close" data-modal="edit-tab-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <label for="edit-tab-title-input" id="tab-title-label">タイトル:</label>
+                    <input type="text" id="edit-tab-title-input" class="modal-input" placeholder="タイトルを入力">
+                    <br><br>
+                    <label for="edit-tab-url-input" id="tab-url-label">URL:</label>
+                    <input type="text" id="edit-tab-url-input" class="modal-input" placeholder="URLを入力">
+                </div>
+                <div class="modal-footer">
+                    <button id="edit-tab-cancel" class="modal-btn cancel">キャンセル</button>
+                    <button id="edit-tab-confirm" class="modal-btn confirm">保存</button>
                 </div>
             </div>
         </div>

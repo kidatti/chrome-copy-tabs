@@ -174,5 +174,37 @@
   "settingsLink": {
     "message": "Settings",
     "description": "Settings link text"
+  },
+  "editTab": {
+    "message": "Edit",
+    "description": "Edit button text"
+  },
+  "editTabTitle": {
+    "message": "Edit Tab",
+    "description": "Edit tab modal title"
+  },
+  "tabTitleLabel": {
+    "message": "Title:",
+    "description": "Tab title label"
+  },
+  "tabUrlLabel": {
+    "message": "URL:",
+    "description": "Tab URL label"
+  },
+  "save": {
+    "message": "Save",
+    "description": "Save button text"
+  },
+  "copyUrls": {
+    "message": "Copy URLs",
+    "description": "Copy URLs button text"
+  },
+  "copyTitlesUrls": {
+    "message": "Copy Titles & URLs",
+    "description": "Copy titles and URLs button text"
+  },
+  "markDateTime": {
+    "message": "Saved",
+    "description": "Mark date time label"
   }
 } 

@@ -33,6 +33,10 @@ You can save reference articles and pass the list to tools like Notebook LM.
 
 # Change Log
 
+## v.0.9.2
+
+- Edit title and URL
+
 ## v.0.9.1
 
 - Bug fixes

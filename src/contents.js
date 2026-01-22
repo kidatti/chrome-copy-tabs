@@ -47,8 +47,8 @@ document.addEventListener("DOMContentLoaded", function(){
         if (result.language) {
             i18n.setLanguage(result.language);
         } else {
-            console.log('No language setting found, setting to auto');
-            i18n.setLanguage('auto');
+            console.log('No language setting found, defaulting to English');
+            i18n.setLanguage('en');
         }
 
         // Update UI with current language
@@ -112,7 +112,7 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
                 i18n.setLanguage('auto');
             }
         } else {
-            i18n.setLanguage('auto');
+            i18n.setLanguage('en');
         }
         
         // Update UI with new language

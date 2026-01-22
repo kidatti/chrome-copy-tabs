@@ -2,6 +2,7 @@ let currentFolderId = null;
 let currentRenameFolderId = null;
 let currentDeleteFolderId = null;
 let currentEditTabId = null;
+let draggedElement = null;
 
 document.addEventListener("DOMContentLoaded", function() {
     // Wait for i18n object to be loaded
@@ -10,8 +11,22 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
     }
 
-    // Set page title (removed page-title element display)
+    // Load language setting first, then initialize UI
+    chrome.storage.sync.get(['language'], function(result) {
+        if (result.language) {
+            if (result.language !== 'auto') {
+                i18n.setLanguage(result.language);
+            } else {
+                i18n.setLanguage('auto');
+            }
+        }
 
+        // Initialize UI after language is loaded
+        initializeUI();
+    });
+});
+
+function initializeUI() {
     // Set folder-related UI text
     document.getElementById('folders-title').textContent = i18n.getString('folders');
     document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
@@ -23,24 +38,24 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Set modal UI text
     initializeModalTexts();
-    
+
     // Initialize folder management
     initializeFolderManagement();
-    
+
     // Initialize modal functionality
     initializeModals();
-    
+
     // Add click event for uncategorized folder
     document.querySelector('[data-folder-id="null"]').addEventListener('click', function() {
         selectFolder(null);
     });
-    
+
     // Add click event for uncategorized folder rename button
     document.querySelector('.rename-uncategorized-btn').addEventListener('click', function(e) {
         e.stopPropagation();
         renameUncategorizedFolder();
     });
-    
+
     // Add click event for settings icon
     document.getElementById('settingsIcon').addEventListener('click', function() {
         chrome.runtime.openOptionsPage();
@@ -54,13 +69,13 @@ document.addEventListener("DOMContentLoaded", function() {
     loadFolders();
     loadUncategorizedName();
     loadAllMarkedTabs();
-});
+}
 
 // Listen for storage changes to update language and folders
 chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'sync' && changes.language) {
         console.log('All_tabs: Language setting changed to:', changes.language.newValue);
-        
+
         // Set the new language
         if (changes.language.newValue) {
             if (changes.language.newValue !== 'auto') {
@@ -69,23 +84,22 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
                 i18n.setLanguage('auto');
             }
         } else {
-            i18n.setLanguage('auto');
+            i18n.setLanguage('en');
         }
-        
-        // Update folder-related UI text
+
+        // Update all UI text
         document.getElementById('folders-title').textContent = i18n.getString('folders');
         document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
-
-        // Update copy button texts
+        document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
         document.getElementById('copy-urls-btn').textContent = i18n.getString('copyUrls');
         document.getElementById('copy-titles-urls-btn').textContent = i18n.getString('copyTitlesUrls');
 
         // Update modal UI text
         initializeModalTexts();
-        
+
         // Reload uncategorized name
         loadUncategorizedName();
-        
+
         // Reload tabs to update any displayed text
         loadAllMarkedTabs();
     }
@@ -165,16 +179,16 @@ function migrateFromMarkedTabs() {
 // Initialize modal texts
 function initializeModalTexts() {
     // Add Folder Modal
-    document.getElementById('add-folder-title').textContent = i18n.getString('addFolder');
+    document.getElementById('add-folder-title').textContent = i18n.getString('addFolderTitle') || '新しいフォルダ';
     document.getElementById('folder-name-label').textContent = i18n.getString('folderLabel');
-    document.getElementById('folder-name-input').placeholder = i18n.getString('enterFolderName');
+    document.getElementById('folder-name-input').placeholder = i18n.getString('folderNamePlaceholder') || 'フォルダ名を入力';
     document.getElementById('add-folder-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
     document.getElementById('add-folder-confirm').textContent = i18n.getString('create') || '作成';
-    
+
     // Rename Folder Modal
     document.getElementById('rename-folder-title').textContent = i18n.getString('renameFolderTitle') || 'フォルダ名変更';
     document.getElementById('rename-folder-label').textContent = i18n.getString('newFolderNameLabel') || '新しいフォルダ名:';
-    document.getElementById('rename-folder-input').placeholder = i18n.getString('enterNewFolderName');
+    document.getElementById('rename-folder-input').placeholder = i18n.getString('newFolderNamePlaceholder') || '新しいフォルダ名を入力';
     document.getElementById('rename-folder-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
     document.getElementById('rename-folder-confirm').textContent = i18n.getString('change') || '変更';
     
@@ -186,11 +200,13 @@ function initializeModalTexts() {
     document.getElementById('delete-folder-confirm').textContent = i18n.getString('delete') || '削除';
 
     // Edit Tab Modal
-    document.getElementById('edit-tab-title').textContent = i18n.getString('editTabTitle') || 'タブ編集';
-    document.getElementById('tab-title-label').textContent = i18n.getString('tabTitleLabel') || 'タイトル:';
-    document.getElementById('tab-url-label').textContent = i18n.getString('tabUrlLabel') || 'URL:';
+    document.getElementById('edit-tab-title').textContent = i18n.getString('editTabModalTitle') || 'タブ編集';
+    document.getElementById('tab-title-label').textContent = i18n.getString('editTabTitleLabel') || 'タイトル:';
+    document.getElementById('tab-url-label').textContent = i18n.getString('editTabUrlLabel') || 'URL:';
+    document.getElementById('edit-tab-title-input').placeholder = i18n.getString('enterTabTitle') || 'タイトルを入力';
+    document.getElementById('edit-tab-url-input').placeholder = i18n.getString('enterTabUrl') || 'URLを入力';
     document.getElementById('edit-tab-cancel').textContent = i18n.getString('cancel') || 'キャンセル';
-    document.getElementById('edit-tab-confirm').textContent = i18n.getString('save') || '保存';
+    document.getElementById('edit-tab-confirm').textContent = i18n.getString('saveButton') || '保存';
 }
 
 // Initialize folder management
@@ -665,9 +681,13 @@ function loadAllMarkedTabs() {
                 } else {
                     allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
                 }
-                
-                // Sort tabs by timestamp (newest first)
-                allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                // Sort tabs by order (if exists) or timestamp
+                allTabs.sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
+                    const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
+                    return orderA - orderB;
+                });
                 
                 if (allTabs.length === 0) {
                     tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
@@ -675,19 +695,28 @@ function loadAllMarkedTabs() {
                     return;
                 }
                 
-                allTabs.forEach(tab => {
+                allTabs.forEach((tab, index) => {
                     // Ensure locked property exists for backward compatibility
                     if (tab.locked === undefined) {
                         tab.locked = false;
                     }
-                    
+
+                    // Ensure order property exists for drag and drop
+                    if (tab.order === undefined) {
+                        tab.order = index;
+                    }
+
                     const tabElement = document.createElement('div');
                     tabElement.className = 'tab-item';
-                    
+                    tabElement.setAttribute('draggable', 'true');
+                    tabElement.setAttribute('data-tab-id', tab.id);
+
                     // Format the date
                     const date = new Date(tab.timestamp);
                     const formattedDate = date.toLocaleString();
                     
+                    const uncategorizedName = i18n.getString('uncategorized') || 'Uncategorized';
+
                     tabElement.innerHTML = `
                         <div class="tab-info" data-url="${tab.url}">
                             <div class="tab-title">${tab.title}</div>
@@ -696,8 +725,13 @@ function loadAllMarkedTabs() {
                         </div>
                         <div class="tab-controls">
                             <select class="folder-select" data-id="${tab.id}">
-                                <option value="null">未分類</option>
+                                <option value="null">${uncategorizedName}</option>
                             </select>
+                            <img class="copy-icon"
+                                 src="images/copy.svg"
+                                 alt="Copy"
+                                 title="${i18n.getString('copyButton')}"
+                                 data-id="${tab.id}">
                             <img class="lock-icon ${tab.locked ? 'locked' : ''}"
                                  src="images/${tab.locked ? 'lock' : 'unlock'}.svg"
                                  alt="${tab.locked ? 'Locked' : 'Unlocked'}"
@@ -748,6 +782,13 @@ function loadAllMarkedTabs() {
                         });
                     }
 
+                    // Add copy icon functionality
+                    const copyIcon = tabElement.querySelector('.copy-icon');
+                    copyIcon.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        copySingleTab(tab.title, tab.url);
+                    });
+
                     // Add folder select functionality
                     const folderSelect = tabElement.querySelector('.folder-select');
                     populateFolderSelect(folderSelect, tab.folderId);
@@ -755,7 +796,14 @@ function loadAllMarkedTabs() {
                         e.stopPropagation();
                         moveTabToFolder(tab.id, this.value === 'null' ? null : this.value);
                     });
-                    
+
+                    // Add drag and drop functionality
+                    tabElement.addEventListener('dragstart', handleDragStart);
+                    tabElement.addEventListener('dragover', handleDragOver);
+                    tabElement.addEventListener('drop', handleDrop);
+                    tabElement.addEventListener('dragend', handleDragEnd);
+                    tabElement.addEventListener('dragleave', handleDragLeave);
+
                     tabList.appendChild(tabElement);
                 });
                 
@@ -1073,6 +1121,155 @@ function confirmEditTab() {
                 }
 
                 closeAllModals();
+                loadAllMarkedTabs();
+            });
+        });
+    });
+}
+
+// Show toast notification
+function showToast(message, type = 'success', duration = 2000) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast ${type}`;
+
+    // Show toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Hide toast after duration
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, duration);
+}
+
+// Copy single tab title and URL
+function copySingleTab(title, url) {
+    const content = `${title}\n${url}`;
+    const textarea = document.getElementById('copy-textarea');
+    textarea.value = content;
+    textarea.select();
+    document.execCommand('copy');
+
+    // Show toast notification
+    showToast(i18n.getString('copied') || 'Copied!', 'success');
+}
+
+// Drag and drop event handlers
+function handleDragStart(e) {
+    draggedElement = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+
+    if (this !== draggedElement) {
+        this.classList.add('drag-over');
+    }
+
+    return false;
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+
+    if (draggedElement !== this) {
+        // Get the dragged tab ID and the target tab ID
+        const draggedId = draggedElement.getAttribute('data-tab-id');
+        const targetId = this.getAttribute('data-tab-id');
+
+        // Reorder tabs in storage
+        reorderTabs(draggedId, targetId);
+    }
+
+    this.classList.remove('drag-over');
+
+    return false;
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+
+    // Remove drag-over class from all items
+    document.querySelectorAll('.tab-item').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+
+    draggedElement = null;
+}
+
+// Reorder tabs in storage
+function reorderTabs(draggedId, targetId) {
+    chrome.storage.sync.get(['dataKeys'], function(result) {
+        const dataKeys = result.dataKeys || [];
+
+        chrome.storage.sync.get(dataKeys, function(tabsData) {
+            // Get all tabs for the current folder
+            let allTabs = dataKeys.map(key => ({ key, ...tabsData[key] })).filter(tab => tab.id);
+
+            // Filter tabs by current folder
+            if (currentFolderId !== null) {
+                allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
+            } else {
+                allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
+            }
+
+            // Sort by current order or timestamp
+            allTabs.sort((a, b) => {
+                const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
+                const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
+                return orderA - orderB;
+            });
+
+            // Find the positions of dragged and target tabs
+            const draggedIndex = allTabs.findIndex(tab => tab.id == draggedId);
+            const targetIndex = allTabs.findIndex(tab => tab.id == targetId);
+
+            if (draggedIndex === -1 || targetIndex === -1) {
+                return;
+            }
+
+            // Move the dragged tab to the target position
+            const [draggedTab] = allTabs.splice(draggedIndex, 1);
+            allTabs.splice(targetIndex, 0, draggedTab);
+
+            // Update order for all tabs in the current folder
+            const updateData = {};
+            allTabs.forEach((tab, index) => {
+                tab.order = index;
+                updateData[tab.key] = {
+                    id: tab.id,
+                    title: tab.title,
+                    url: tab.url,
+                    timestamp: tab.timestamp,
+                    locked: tab.locked,
+                    folderId: tab.folderId,
+                    order: tab.order,
+                    html: tab.html
+                };
+            });
+
+            // Save the updated order
+            chrome.storage.sync.set(updateData, function() {
+                if (chrome.runtime.lastError) {
+                    console.error("Error saving tab order:", chrome.runtime.lastError);
+                    return;
+                }
+
+                // Reload tabs to show the new order
                 loadAllMarkedTabs();
             });
         });

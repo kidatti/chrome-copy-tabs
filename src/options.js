@@ -39,12 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadSettings() {
     chrome.storage.sync.get(['language'], function(result) {
         const languageSelect = document.getElementById('language-select');
-        
+
         if (result.language) {
             languageSelect.value = result.language;
         } else {
-            // Default to auto if no language setting is saved
-            languageSelect.value = 'auto';
+            // Default to English if no language setting is saved
+            languageSelect.value = 'en';
         }
     });
 }
@@ -91,7 +91,7 @@ function showStatus(message, type, targetId = 'language-status') {
 // Update UI language based on selected language
 function updateLanguageUI() {
     chrome.storage.sync.get(['language'], function(result) {
-        const language = result.language || 'auto';
+        const language = result.language || 'en';
         
         // Set the language for i18n
         if (language !== 'auto') {

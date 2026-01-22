@@ -70,7 +70,9 @@ const i18n = {
         folders: "フォルダ",
         uncategorized: "未分類",
         addFolder: "+ 新しいフォルダ",
-        folderLabel: "フォルダ:",
+        addFolderTitle: "新しいフォルダ",
+        folderLabel: "フォルダ名:",
+        folderNamePlaceholder: "フォルダ名を入力",
         setDefault: "デフォルトに設定",
         defaultFolderSet: "デフォルトフォルダ設定済み",
         enterFolderName: "フォルダ名を入力してください:",
@@ -83,13 +85,25 @@ const i18n = {
         delete: "削除",
         renameFolderTitle: "フォルダ名変更",
         newFolderNameLabel: "新しいフォルダ名:",
+        newFolderNamePlaceholder: "新しいフォルダ名を入力",
         deleteFolderTitle: "フォルダ削除",
         deleteFolderMessage: "このフォルダを削除しますか？",
         deleteFolderWarning: "フォルダ内のタブは未分類に移動されます。",
 
         // Copy buttons
         copyUrls: "URLをコピー",
-        copyTitlesUrls: "タイトル & URLをコピー"
+        copyTitlesUrls: "タイトル & URLをコピー",
+        copyButton: "コピー",
+
+        // Edit tab
+        editTab: "編集",
+        editTabModalTitle: "タブ編集",
+        editTabTitleLabel: "タイトル:",
+        editTabUrlLabel: "URL:",
+
+        // Placeholders
+        enterTabTitle: "タイトルを入力",
+        enterTabUrl: "URLを入力"
     },
     en: {
         // Button texts
@@ -161,7 +175,9 @@ const i18n = {
         folders: "Folders",
         uncategorized: "Uncategorized",
         addFolder: "+ New Folder",
-        folderLabel: "Folder:",
+        addFolderTitle: "New Folder",
+        folderLabel: "Folder name:",
+        folderNamePlaceholder: "Enter folder name",
         setDefault: "Set as Default",
         defaultFolderSet: "Default Folder Set",
         enterFolderName: "Enter folder name:",
@@ -174,13 +190,25 @@ const i18n = {
         delete: "Delete",
         renameFolderTitle: "Rename Folder",
         newFolderNameLabel: "New folder name:",
+        newFolderNamePlaceholder: "Enter new folder name",
         deleteFolderTitle: "Delete Folder",
         deleteFolderMessage: "Delete this folder?",
         deleteFolderWarning: "Tabs in this folder will be moved to uncategorized.",
 
         // Copy buttons
         copyUrls: "Copy URLs",
-        copyTitlesUrls: "Copy Titles & URLs"
+        copyTitlesUrls: "Copy Titles & URLs",
+        copyButton: "Copy",
+
+        // Edit tab
+        editTab: "Edit",
+        editTabModalTitle: "Edit Tab",
+        editTabTitleLabel: "Title:",
+        editTabUrlLabel: "URL:",
+
+        // Placeholders
+        enterTabTitle: "Enter title",
+        enterTabUrl: "Enter URL"
     },
     
     // Add getString method to i18n object
@@ -236,10 +264,8 @@ function loadLanguageSetting() {
         chrome.storage.sync.get(['language'], function(result) {
             if (result.language) {
                 currentLanguage = result.language;
-            } else {
-                // If no language is set, default to auto
-                currentLanguage = 'auto';
             }
+            // If no language is set, keep 'auto' (default value)
             resolve();
         });
     });

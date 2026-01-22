@@ -16,18 +16,18 @@
             width: 100%;
             margin: 0;
             background: white;
-            padding: 20px;
+            padding: 16px;
             min-height: 100vh;
             box-sizing: border-box;
             display: flex;
-            gap: 20px;
+            gap: 16px;
         }
         .sidebar {
-            width: 250px;
+            width: 220px;
             flex-shrink: 0;
             background: #f8f9fa;
-            border-radius: 8px;
-            padding: 16px;
+            border-radius: 6px;
+            padding: 12px;
             height: fit-content;
             border-right: 1px solid #e5e5e5;
         }
@@ -38,51 +38,56 @@
         .tab-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
         .tab-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 20px;
+            padding: 12px 16px;
             background-color: #ffffff;
             border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
         }
         .tab-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
         }
         .tab-info {
             flex: 1;
-            margin-right: 16px;
+            margin-right: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
+            padding: 4px;
+            margin: -4px;
         }
         .tab-info:hover {
             background-color: #f8f9fa;
             border-radius: 4px;
         }
         .tab-title {
-            font-size: 16px;
+            font-size: 14px;
             color: #333333;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             word-break: break-all;
+            line-height: 1.4;
         }
         .tab-url {
-            font-size: 14px;
+            font-size: 12px;
             color: #666666;
             word-break: break-all;
+            line-height: 1.3;
         }
         .lock-icon, .edit-icon, .delete-icon {
-            width: 24px;
-            height: 24px;
-            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
             cursor: pointer;
             opacity: 0.6;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         .lock-icon:hover, .edit-icon:hover, .delete-icon:hover {
             opacity: 1;
@@ -98,19 +103,20 @@
         .no-tabs {
             text-align: center;
             color: #666666;
-            padding: 40px;
-            font-size: 18px;
+            padding: 32px;
+            font-size: 16px;
         }
         .timestamp {
-            font-size: 12px;
+            font-size: 11px;
             color: #999999;
-            margin-top: 4px;
+            margin-top: 3px;
+            line-height: 1.3;
         }
         .page-header {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .page-header h1 {
-            font-size: 24px;
+            font-size: 20px;
             color: #333;
             margin: 0;
             font-weight: 600;
@@ -119,20 +125,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .copy-buttons {
             display: flex;
             gap: 8px;
         }
         .copy-btn {
-            padding: 8px 16px;
+            padding: 6px 12px;
             background: #4a90e2;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             transition: all 0.2s ease;
         }
@@ -143,14 +149,14 @@
             transform: scale(0.98);
         }
         .folder-list {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .folder-item {
-            padding: 12px 16px;
+            padding: 8px 12px;
             background: white;
             border: 1px solid #dee2e6;
-            border-radius: 6px;
-            margin-bottom: 8px;
+            border-radius: 5px;
+            margin-bottom: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
@@ -166,13 +172,14 @@
         }
         .folder-name {
             font-weight: 500;
+            font-size: 13px;
         }
         .folder-count {
             background: rgba(0,0,0,0.1);
             color: #6c757d;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 11px;
         }
         .folder-item.active .folder-count {
             color: rgba(255,255,255,0.8);
@@ -188,8 +195,8 @@
         .folder-btn {
             background: none;
             border: none;
-            padding: 4px;
-            border-radius: 4px;
+            padding: 3px;
+            border-radius: 3px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -199,8 +206,8 @@
             background: rgba(0,0,0,0.1);
         }
         .folder-btn img {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             opacity: 0.7;
         }
         .folder-btn:hover img {
@@ -208,37 +215,37 @@
         }
         .add-folder-btn {
             width: 100%;
-            padding: 10px;
+            padding: 7px 10px;
             background: #28a745;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
-            margin-bottom: 16px;
+            font-size: 13px;
+            margin-bottom: 12px;
         }
         .add-folder-btn:hover {
             background: #218838;
         }
         .sidebar-title {
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 600;
             color: #495057;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
             border-bottom: 1px solid #dee2e6;
         }
         .tab-controls {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
         .folder-select {
-            padding: 4px 8px;
+            padding: 3px 6px;
             border: 1px solid #dee2e6;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             background: white;
             cursor: pointer;
         }
@@ -386,10 +393,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             background: rgba(102, 126, 234, 0.1);
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -398,12 +405,68 @@
             transform: scale(1.05);
         }
         .settings-icon img {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             transition: transform 0.3s ease;
         }
         .settings-icon:hover img {
             transform: rotate(45deg);
+        }
+
+        /* Copy icon styles */
+        .copy-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .copy-icon:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        /* Drag and drop styles */
+        .tab-item {
+            cursor: move;
+        }
+        .tab-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        .tab-item.drag-over {
+            border-top: 3px solid #4a90e2;
+        }
+
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #323232;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success {
+            background: #28a745;
+        }
+        .toast.error {
+            background: #dc3545;
         }
     </style>
 </head>
@@ -442,7 +505,10 @@
             <textarea id="copy-textarea" style="position: absolute; left: -9999px;"></textarea>
         </div>
     </div>
-    
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast"></div>
+
     <!-- Modal dialogs -->
     <div id="modal-overlay" class="modal-overlay">
         <!-- Add Folder Modal -->

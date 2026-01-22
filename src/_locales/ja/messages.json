@@ -295,21 +295,17 @@
     "message": "編集",
     "description": "編集ボタンのテキスト"
   },
-  "editTabTitle": {
+  "editTabModalTitle": {
     "message": "タブ編集",
     "description": "タブ編集モーダルのタイトル"
   },
-  "tabTitleLabel": {
+  "editTabTitleLabel": {
     "message": "タイトル:",
-    "description": "タブタイトルのラベル"
+    "description": "タブ編集モーダルのタイトルラベル"
   },
-  "tabUrlLabel": {
+  "editTabUrlLabel": {
     "message": "URL:",
-    "description": "タブURLのラベル"
-  },
-  "save": {
-    "message": "保存",
-    "description": "保存ボタンのテキスト"
+    "description": "タブ編集モーダルのURLラベル"
   },
   "copyUrls": {
     "message": "URLをコピー",
@@ -322,5 +318,29 @@
   "markDateTime": {
     "message": "保存日時",
     "description": "保存日時のラベル"
+  },
+  "copyButton": {
+    "message": "コピー",
+    "description": "コピーボタンのテキスト"
+  },
+  "addFolderTitle": {
+    "message": "新しいフォルダ",
+    "description": "フォルダ追加モーダルのタイトル"
+  },
+  "folderNamePlaceholder": {
+    "message": "フォルダ名を入力",
+    "description": "フォルダ名入力のプレースホルダー"
+  },
+  "newFolderNamePlaceholder": {
+    "message": "新しいフォルダ名を入力",
+    "description": "新しいフォルダ名入力のプレースホルダー"
+  },
+  "enterTabTitle": {
+    "message": "タイトルを入力",
+    "description": "タブタイトル入力のプレースホルダー"
+  },
+  "enterTabUrl": {
+    "message": "URLを入力",
+    "description": "タブURL入力のプレースホルダー"
   }
 } 

@@ -179,21 +179,17 @@
     "message": "Edit",
     "description": "Edit button text"
   },
-  "editTabTitle": {
+  "editTabModalTitle": {
     "message": "Edit Tab",
     "description": "Edit tab modal title"
   },
-  "tabTitleLabel": {
+  "editTabTitleLabel": {
     "message": "Title:",
-    "description": "Tab title label"
+    "description": "Edit tab modal title label"
   },
-  "tabUrlLabel": {
+  "editTabUrlLabel": {
     "message": "URL:",
-    "description": "Tab URL label"
-  },
-  "save": {
-    "message": "Save",
-    "description": "Save button text"
+    "description": "Edit tab modal URL label"
   },
   "copyUrls": {
     "message": "Copy URLs",
@@ -206,5 +202,145 @@
   "markDateTime": {
     "message": "Saved",
     "description": "Mark date time label"
+  },
+  "copyButton": {
+    "message": "Copy",
+    "description": "Copy button text"
+  },
+  "settingsTitle": {
+    "message": "CopyTabs Settings",
+    "description": "Settings page title"
+  },
+  "settingsSaved": {
+    "message": "Settings saved",
+    "description": "Settings saved success message"
+  },
+  "languageSettings": {
+    "message": "Language Settings",
+    "description": "Language settings section title"
+  },
+  "languageLabel": {
+    "message": "Language:",
+    "description": "Language selection label"
+  },
+  "languageAuto": {
+    "message": "Auto (Follow Browser)",
+    "description": "Auto language selection option"
+  },
+  "languageJapanese": {
+    "message": "日本語",
+    "description": "Japanese language option"
+  },
+  "languageEnglish": {
+    "message": "English",
+    "description": "English language option"
+  },
+  "saveButton": {
+    "message": "Save",
+    "description": "Save button text"
+  },
+  "dataManagement": {
+    "message": "Data Management",
+    "description": "Data management section title"
+  },
+  "dataManagementDescription": {
+    "message": "Backup, restore, or delete your extension data.",
+    "description": "Data management section description"
+  },
+  "exportData": {
+    "message": "Export Data",
+    "description": "Export data label"
+  },
+  "exportDescription": {
+    "message": "Download all your data as a JSON backup file.",
+    "description": "Export function description"
+  },
+  "exportJson": {
+    "message": "Export JSON",
+    "description": "Export JSON button text"
+  },
+  "importData": {
+    "message": "Import Data",
+    "description": "Import data label"
+  },
+  "importDescription": {
+    "message": "Restore data from a previously exported JSON file.",
+    "description": "Import function description"
+  },
+  "importJson": {
+    "message": "Import JSON",
+    "description": "Import JSON button text"
+  },
+  "clearAllData": {
+    "message": "Clear All Data",
+    "description": "Clear all data button text"
+  },
+  "storageContents": {
+    "message": "Storage Contents",
+    "description": "Storage contents section title"
+  },
+  "storageDescription": {
+    "message": "View all stored data in JSON format for debugging.",
+    "description": "Storage section description"
+  },
+  "refreshButton": {
+    "message": "Refresh",
+    "description": "Refresh button text"
+  },
+  "exportSuccess": {
+    "message": "Data exported successfully!",
+    "description": "Export success message"
+  },
+  "importSuccess": {
+    "message": "Data imported successfully!",
+    "description": "Import success message"
+  },
+  "clearSuccess": {
+    "message": "All data cleared successfully!",
+    "description": "Data clear success message"
+  },
+  "selectFile": {
+    "message": "Please select a file to import.",
+    "description": "File selection error message"
+  },
+  "confirmImport": {
+    "message": "This will replace all current data. Are you sure?",
+    "description": "Import confirmation message"
+  },
+  "confirmClear": {
+    "message": "This will permanently delete all your data. Are you sure?",
+    "description": "Data clear confirmation message"
+  },
+  "importError": {
+    "message": "Import failed",
+    "description": "Import error message"
+  },
+  "clearError": {
+    "message": "Failed to clear data",
+    "description": "Clear error message"
+  },
+  "invalidFile": {
+    "message": "Invalid JSON file format.",
+    "description": "Invalid file error message"
+  },
+  "addFolderTitle": {
+    "message": "New Folder",
+    "description": "Add folder modal title"
+  },
+  "folderNamePlaceholder": {
+    "message": "Enter folder name",
+    "description": "Folder name input placeholder"
+  },
+  "newFolderNamePlaceholder": {
+    "message": "Enter new folder name",
+    "description": "New folder name input placeholder"
+  },
+  "enterTabTitle": {
+    "message": "Enter title",
+    "description": "Tab title input placeholder"
+  },
+  "enterTabUrl": {
+    "message": "Enter URL",
+    "description": "Tab URL input placeholder"
   }
 } 

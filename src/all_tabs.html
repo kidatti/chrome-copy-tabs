@@ -152,45 +152,53 @@
             margin-bottom: 16px;
         }
         .folder-item {
-            padding: 8px 12px;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            margin-bottom: 6px;
+            padding: 6px 8px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            margin-bottom: 2px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: relative;
+            min-height: 28px;
+            box-sizing: border-box;
         }
         .folder-item:hover {
-            background: #e9ecef;
+            background: rgba(0, 0, 0, 0.05);
         }
         .folder-item.active {
-            background: #007bff;
-            color: white;
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
         }
         .folder-name {
-            font-weight: 500;
+            font-weight: 400;
             font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .folder-count {
-            background: rgba(0,0,0,0.1);
-            color: #6c757d;
-            padding: 1px 6px;
-            border-radius: 10px;
+            color: #999;
             font-size: 11px;
+            min-width: 16px;
+            text-align: right;
         }
         .folder-item.active .folder-count {
-            color: rgba(255,255,255,0.8);
-            background: rgba(255,255,255,0.2);
+            color: #007bff;
         }
         .folder-actions {
-            display: none;
+            display: flex;
             gap: 4px;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.15s ease;
         }
         .folder-item:hover .folder-actions {
-            display: flex;
+            visibility: visible;
+            opacity: 1;
         }
         .folder-btn {
             background: none;
@@ -201,6 +209,9 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
         }
         .folder-btn:hover {
             background: rgba(0,0,0,0.1);
@@ -226,14 +237,6 @@
         }
         .add-folder-btn:hover {
             background: #218838;
-        }
-        .sidebar-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 12px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #dee2e6;
         }
         .tab-controls {
             display: flex;
@@ -468,16 +471,88 @@
         .toast.error {
             background: #dc3545;
         }
+
+        /* Folder tree structure styles */
+        .folder-item[data-level="1"] {
+            padding-left: 22px;
+        }
+        .folder-item[data-level="2"] {
+            padding-left: 36px;
+        }
+        .folder-left {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+        .folder-toggle {
+            width: 12px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 8px;
+            color: #6c757d;
+        }
+        .folder-toggle.has-children {
+            cursor: pointer;
+        }
+        .folder-toggle.has-children::before {
+            content: '▶';
+            transition: transform 0.2s ease;
+        }
+        .folder-toggle.has-children.expanded::before {
+            transform: rotate(90deg);
+        }
+        .folder-toggle.has-children:hover {
+            color: #333;
+        }
+
+        /* Folder drag and drop styles */
+        .folder-item.dragging {
+            opacity: 0.4;
+        }
+        .folder-item.drag-over-above::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            top: 0;
+            height: 2px;
+            background: #007bff;
+        }
+        .folder-item.drag-over-below::after {
+            content: '';
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            bottom: 0;
+            height: 2px;
+            background: #007bff;
+        }
+        .folder-item.drag-over-inside {
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        /* Add subfolder button */
+        .add-subfolder-btn img {
+            width: 12px;
+            height: 12px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="sidebar">
-            <div class="sidebar-title" id="folders-title"></div>
             <button class="add-folder-btn" id="add-folder-btn"></button>
             <div class="folder-list" id="folder-list">
                 <div class="folder-item active" data-folder-id="null">
-                    <div class="folder-name" id="uncategorized-name"></div>
+                    <div class="folder-left">
+                        <span class="folder-toggle"></span>
+                        <div class="folder-name" id="uncategorized-name"></div>
+                    </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <div class="folder-actions">
                             <button class="folder-btn rename-uncategorized-btn" data-folder-id="null">

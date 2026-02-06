@@ -972,23 +972,47 @@ function initializeFolderUI() {
     document.getElementById('uncategorized-option').textContent = i18n.getString('uncategorized');
 }
 
-// Load folders for popup
+// Load folders for popup (with tree hierarchy)
 function loadFoldersForPopup() {
     chrome.storage.sync.get(['folders', 'uncategorizedName'], function(result) {
         const folders = result.folders || [];
         const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
         const folderSelect = document.getElementById('folder-select');
-        
+
         // Clear existing options except the first one
         folderSelect.innerHTML = `<option value="null">${uncategorizedName}</option>`;
-        
-        // Add folder options
-        folders.forEach(folder => {
-            const option = document.createElement('option');
-            option.value = folder.id;
-            option.textContent = folder.name;
-            folderSelect.appendChild(option);
-        });
+
+        // Build tree and add options with indentation
+        const tree = buildFolderTreeForPopup(folders);
+        addFolderOptionsToSelect(folderSelect, tree, 0);
+    });
+}
+
+// Build folder tree from flat list (for popup)
+function buildFolderTreeForPopup(folders, parentId = null) {
+    return folders
+        .filter(folder => (folder.parentId || null) === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(folder => ({
+            ...folder,
+            children: buildFolderTreeForPopup(folders, folder.id)
+        }));
+}
+
+// Add folder options to select with indentation
+function addFolderOptionsToSelect(selectElement, tree, level) {
+    tree.forEach(folder => {
+        const option = document.createElement('option');
+        option.value = folder.id;
+        // Add indentation prefix for hierarchy
+        const indent = level > 0 ? '\u00A0\u00A0'.repeat(level) + '\u2514\u00A0' : '';
+        option.textContent = indent + folder.name;
+        selectElement.appendChild(option);
+
+        // Add children recursively
+        if (folder.children && folder.children.length > 0) {
+            addFolderOptionsToSelect(selectElement, folder.children, level + 1);
+        }
     });
 }
 

@@ -3,6 +3,11 @@ let currentRenameFolderId = null;
 let currentDeleteFolderId = null;
 let currentEditTabId = null;
 let draggedElement = null;
+let draggedFolderElement = null;
+let addSubfolderParentId = null;
+
+// Maximum folder depth (3 levels: root=0, child=1, grandchild=2)
+const MAX_FOLDER_DEPTH = 2;
 
 document.addEventListener("DOMContentLoaded", function() {
     // Wait for i18n object to be loaded
@@ -28,7 +33,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function initializeUI() {
     // Set folder-related UI text
-    document.getElementById('folders-title').textContent = i18n.getString('folders');
     document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
     document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
 
@@ -46,8 +50,23 @@ function initializeUI() {
     initializeModals();
 
     // Add click event for uncategorized folder
-    document.querySelector('[data-folder-id="null"]').addEventListener('click', function() {
+    const uncategorizedFolder = document.querySelector('[data-folder-id="null"]');
+    uncategorizedFolder.addEventListener('click', function() {
         selectFolder(null);
+    });
+
+    // Add drag event listeners to uncategorized folder to prevent drops
+    uncategorizedFolder.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        // Don't show any drop indicators for uncategorized
+    });
+    uncategorizedFolder.addEventListener('dragleave', function(e) {
+        // No-op
+    });
+    uncategorizedFolder.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Don't allow dropping on uncategorized
     });
 
     // Add click event for uncategorized folder rename button
@@ -88,7 +107,6 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         }
 
         // Update all UI text
-        document.getElementById('folders-title').textContent = i18n.getString('folders');
         document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
         document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
         document.getElementById('copy-urls-btn').textContent = i18n.getString('copyUrls');
@@ -286,7 +304,7 @@ function closeAllModals() {
     document.querySelectorAll('.modal').forEach(modal => {
         modal.classList.remove('show');
     });
-    
+
     // Clear input fields
     document.getElementById('folder-name-input').value = '';
     document.getElementById('rename-folder-input').value = '';
@@ -297,6 +315,7 @@ function closeAllModals() {
     currentRenameFolderId = null;
     currentDeleteFolderId = null;
     currentEditTabId = null;
+    addSubfolderParentId = null;
 }
 
 // Migrate data to include folder support
@@ -304,7 +323,7 @@ function migrateToFolderSupport() {
     return new Promise((resolve) => {
         chrome.storage.sync.get(['dataKeys'], function(result) {
             const dataKeys = result.dataKeys || [];
-            
+
             if (dataKeys.length === 0) {
                 resolve();
                 return;
@@ -336,37 +355,181 @@ function migrateToFolderSupport() {
     });
 }
 
+// Migrate folders to tree structure (add parentId, order, collapsed)
+function migrateToTreeStructure() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['folders'], function(result) {
+            const folders = result.folders || [];
+
+            if (folders.length === 0) {
+                resolve();
+                return;
+            }
+
+            let hasUpdates = false;
+            folders.forEach((folder, index) => {
+                if (!folder.hasOwnProperty('parentId')) {
+                    folder.parentId = null;
+                    hasUpdates = true;
+                }
+                if (!folder.hasOwnProperty('order')) {
+                    folder.order = index;
+                    hasUpdates = true;
+                }
+                if (!folder.hasOwnProperty('collapsed')) {
+                    folder.collapsed = false;
+                    hasUpdates = true;
+                }
+            });
+
+            if (hasUpdates) {
+                chrome.storage.sync.set({ folders: folders }, function() {
+                    console.log("Migration completed: added parentId, order, collapsed to folders");
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+// Build folder tree from flat list
+function buildFolderTree(folders, parentId = null) {
+    return folders
+        .filter(folder => folder.parentId === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(folder => ({
+            ...folder,
+            children: buildFolderTree(folders, folder.id)
+        }));
+}
+
+// Get all descendant folder IDs (recursive)
+function getAllDescendantIds(folders, parentId) {
+    const descendants = [];
+    const children = folders.filter(f => f.parentId === parentId);
+
+    children.forEach(child => {
+        descendants.push(child.id);
+        descendants.push(...getAllDescendantIds(folders, child.id));
+    });
+
+    return descendants;
+}
+
+// Get folder depth (0 = root level)
+function getFolderDepth(folders, folderId) {
+    if (!folderId) return -1;
+
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return -1;
+
+    let depth = 0;
+    let currentFolder = folder;
+
+    while (currentFolder && currentFolder.parentId) {
+        depth++;
+        currentFolder = folders.find(f => f.id === currentFolder.parentId);
+        if (depth > MAX_FOLDER_DEPTH) break; // Safety check
+    }
+
+    return depth;
+}
+
+// Check if moving a folder to a target would exceed max depth
+function canMoveToParent(folders, folderId, newParentId) {
+    // Can't move to itself
+    if (folderId === newParentId) return false;
+
+    // Check if newParentId is a descendant of folderId (would create cycle)
+    const descendants = getAllDescendantIds(folders, folderId);
+    if (descendants.includes(newParentId)) return false;
+
+    // Check depth limit
+    const newParentDepth = newParentId ? getFolderDepth(folders, newParentId) : -1;
+    const folderSubtreeDepth = getMaxSubtreeDepth(folders, folderId);
+
+    // New depth would be: parent depth + 1 + subtree depth
+    if (newParentDepth + 1 + folderSubtreeDepth > MAX_FOLDER_DEPTH) return false;
+
+    return true;
+}
+
+// Get maximum depth of subtree under a folder
+function getMaxSubtreeDepth(folders, folderId) {
+    const children = folders.filter(f => f.parentId === folderId);
+    if (children.length === 0) return 0;
+
+    let maxChildDepth = 0;
+    children.forEach(child => {
+        const childDepth = getMaxSubtreeDepth(folders, child.id) + 1;
+        maxChildDepth = Math.max(maxChildDepth, childDepth);
+    });
+
+    return maxChildDepth;
+}
+
 // Load folders
 function loadFolders() {
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
-        const folderList = document.getElementById('folder-list');
-        
-        // Clear existing folders (except "未分類")
-        const uncategorized = folderList.querySelector('[data-folder-id="null"]');
-        folderList.innerHTML = '';
-        folderList.appendChild(uncategorized);
-        
-        // Add folders
-        folders.forEach(folder => {
-            const folderElement = createFolderElement(folder);
-            folderList.appendChild(folderElement);
+    migrateToTreeStructure().then(() => {
+        chrome.storage.sync.get(['folders'], function(result) {
+            const folders = result.folders || [];
+            const folderList = document.getElementById('folder-list');
+
+            // Clear existing folders (except "未分類")
+            const uncategorized = folderList.querySelector('[data-folder-id="null"]');
+            folderList.innerHTML = '';
+            folderList.appendChild(uncategorized);
+
+            // Build and render tree structure
+            const tree = buildFolderTree(folders);
+            renderFolderTree(tree, folderList, 0, folders);
+
+            updateFolderCounts();
         });
-        
-        updateFolderCounts();
+    });
+}
+
+// Render folder tree recursively
+function renderFolderTree(tree, container, level, allFolders) {
+    tree.forEach(folder => {
+        const folderElement = createFolderElement(folder, level, allFolders);
+        container.appendChild(folderElement);
+
+        // Render children if not collapsed
+        if (folder.children && folder.children.length > 0 && !folder.collapsed) {
+            renderFolderTree(folder.children, container, level + 1, allFolders);
+        }
     });
 }
 
 // Create folder element
-function createFolderElement(folder) {
+function createFolderElement(folder, level = 0, allFolders = []) {
     const folderElement = document.createElement('div');
     folderElement.className = 'folder-item';
     folderElement.setAttribute('data-folder-id', folder.id);
-    
+    folderElement.setAttribute('data-level', level);
+    folderElement.setAttribute('draggable', 'true');
+
+    const hasChildren = folder.children && folder.children.length > 0;
+    const canAddChild = level < MAX_FOLDER_DEPTH;
+
+    // Toggle icon for collapse/expand
+    const toggleClass = hasChildren
+        ? (folder.collapsed ? 'folder-toggle has-children' : 'folder-toggle has-children expanded')
+        : 'folder-toggle';
+
     folderElement.innerHTML = `
-        <div class="folder-name">${folder.name}</div>
+        <div class="folder-left">
+            <span class="${toggleClass}" data-folder-id="${folder.id}"></span>
+            <div class="folder-name">${folder.name}</div>
+        </div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <div class="folder-actions">
+                ${canAddChild ? `<button class="folder-btn add-subfolder-btn" data-folder-id="${folder.id}" title="${i18n.getString('addSubfolder') || 'Add Subfolder'}">
+                    <img src="images/add.svg" alt="Add">
+                </button>` : ''}
                 <button class="folder-btn rename-folder-btn" data-folder-id="${folder.id}">
                     <img src="images/edit.svg" alt="Edit">
                 </button>
@@ -377,26 +540,252 @@ function createFolderElement(folder) {
             <div class="folder-count">0</div>
         </div>
     `;
-    
-    folderElement.addEventListener('click', function() {
+
+    folderElement.addEventListener('click', function(e) {
+        // Don't select if clicking on toggle
+        if (e.target.classList.contains('folder-toggle')) return;
         selectFolder(folder.id);
     });
-    
+
+    // Add event listener for collapse/expand toggle
+    const toggleBtn = folderElement.querySelector('.folder-toggle');
+    if (hasChildren) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFolderCollapse(folder.id);
+        });
+    }
+
     // Add event listeners for rename and delete buttons
     const renameBtn = folderElement.querySelector('.rename-folder-btn');
     const deleteBtn = folderElement.querySelector('.delete-folder-btn');
-    
+    const addSubfolderBtn = folderElement.querySelector('.add-subfolder-btn');
+
     renameBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         renameFolderDialog(folder.id);
     });
-    
+
     deleteBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         deleteFolder(folder.id);
     });
-    
+
+    if (addSubfolderBtn) {
+        addSubfolderBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            showAddSubfolderModal(folder.id);
+        });
+    }
+
+    // Folder drag and drop events
+    folderElement.addEventListener('dragstart', handleFolderDragStart);
+    folderElement.addEventListener('dragover', handleFolderDragOver);
+    folderElement.addEventListener('dragleave', handleFolderDragLeave);
+    folderElement.addEventListener('drop', handleFolderDrop);
+    folderElement.addEventListener('dragend', handleFolderDragEnd);
+
     return folderElement;
+}
+
+// Toggle folder collapse state
+function toggleFolderCollapse(folderId) {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const folder = folders.find(f => f.id === folderId);
+
+        if (folder) {
+            folder.collapsed = !folder.collapsed;
+            chrome.storage.sync.set({ folders: folders }, function() {
+                loadFolders();
+            });
+        }
+    });
+}
+
+// Show add subfolder modal
+function showAddSubfolderModal(parentId) {
+    addSubfolderParentId = parentId;
+    showModal('add-folder-modal');
+    setTimeout(() => {
+        document.getElementById('folder-name-input').focus();
+    }, 100);
+}
+
+// Folder drag and drop handlers
+function handleFolderDragStart(e) {
+    draggedFolderElement = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.getAttribute('data-folder-id'));
+
+    // Hide the tab dragging element if any
+    draggedElement = null;
+}
+
+function handleFolderDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    if (!draggedFolderElement || this === draggedFolderElement) return;
+
+    // Prevent dropping on or around uncategorized folder
+    const targetId = this.getAttribute('data-folder-id');
+    if (targetId === 'null') return;
+
+    // Remove all drop indicators
+    document.querySelectorAll('.folder-item').forEach(item => {
+        item.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+    });
+
+    // Determine drop position based on mouse position
+    const rect = this.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const height = rect.height;
+
+    if (y < height * 0.25) {
+        this.classList.add('drag-over-above');
+    } else if (y > height * 0.75) {
+        this.classList.add('drag-over-below');
+    } else {
+        this.classList.add('drag-over-inside');
+    }
+
+    return false;
+}
+
+function handleFolderDragLeave(e) {
+    this.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+}
+
+function handleFolderDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedFolderElement || this === draggedFolderElement) return;
+
+    const draggedId = draggedFolderElement.getAttribute('data-folder-id');
+    const targetId = this.getAttribute('data-folder-id');
+
+    // Prevent dropping on uncategorized folder
+    if (targetId === 'null') {
+        this.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+        return;
+    }
+
+    // Determine drop position
+    const rect = this.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const height = rect.height;
+
+    let position;
+    if (y < height * 0.25) {
+        position = 'above';
+    } else if (y > height * 0.75) {
+        position = 'below';
+    } else {
+        position = 'inside';
+    }
+
+    // Remove drop indicators
+    this.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+
+    // Perform the move
+    moveFolder(draggedId, targetId, position);
+
+    return false;
+}
+
+function handleFolderDragEnd(e) {
+    this.classList.remove('dragging');
+
+    // Remove all drop indicators
+    document.querySelectorAll('.folder-item').forEach(item => {
+        item.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+    });
+
+    draggedFolderElement = null;
+}
+
+// Move folder to new position
+function moveFolder(draggedId, targetId, position) {
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+
+        const draggedFolder = folders.find(f => f.id === draggedId);
+        const targetFolder = folders.find(f => f.id === targetId);
+
+        if (!draggedFolder || !targetFolder) return;
+
+        let newParentId;
+        let newOrder;
+
+        if (position === 'inside') {
+            // Move as child of target
+            newParentId = targetId;
+
+            // Check if move is valid
+            if (!canMoveToParent(folders, draggedId, newParentId)) {
+                showToast(i18n.getString('cannotMoveFolder') || 'Cannot move folder here (depth limit or cycle)', 'error');
+                return;
+            }
+
+            // Get order as last child
+            const children = folders.filter(f => f.parentId === newParentId);
+            newOrder = children.length > 0 ? Math.max(...children.map(f => f.order || 0)) + 1 : 0;
+
+            // Expand parent if collapsed
+            targetFolder.collapsed = false;
+        } else {
+            // Move as sibling (above or below target)
+            newParentId = targetFolder.parentId;
+
+            // Check if move is valid
+            if (!canMoveToParent(folders, draggedId, newParentId)) {
+                showToast(i18n.getString('cannotMoveFolder') || 'Cannot move folder here (depth limit or cycle)', 'error');
+                return;
+            }
+
+            // Get siblings and recalculate order
+            const siblings = folders
+                .filter(f => f.parentId === newParentId && f.id !== draggedId)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            const targetIndex = siblings.findIndex(f => f.id === targetId);
+
+            if (position === 'above') {
+                newOrder = targetIndex >= 0 ? targetIndex : 0;
+            } else {
+                newOrder = targetIndex >= 0 ? targetIndex + 1 : siblings.length;
+            }
+
+            // Shift orders for affected siblings
+            siblings.forEach((sibling, index) => {
+                if (index >= newOrder) {
+                    sibling.order = index + 1;
+                } else {
+                    sibling.order = index;
+                }
+            });
+        }
+
+        // Update dragged folder
+        draggedFolder.parentId = newParentId;
+        draggedFolder.order = newOrder;
+
+        // Recalculate all orders for siblings
+        const allSiblings = folders
+            .filter(f => f.parentId === newParentId)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        allSiblings.forEach((sibling, index) => {
+            sibling.order = index;
+        });
+
+        chrome.storage.sync.set({ folders: folders }, function() {
+            loadFolders();
+        });
+    });
 }
 
 // Select folder
@@ -415,6 +804,7 @@ function selectFolder(folderId) {
 
 // Show add folder modal
 function showAddFolderModal() {
+    addSubfolderParentId = null; // Reset to create root folder
     showModal('add-folder-modal');
     setTimeout(() => {
         document.getElementById('folder-name-input').focus();
@@ -425,22 +815,31 @@ function showAddFolderModal() {
 function confirmAddFolder() {
     const name = document.getElementById('folder-name-input').value.trim();
     if (name) {
-        addFolder(name);
+        addFolder(name, addSubfolderParentId);
+        addSubfolderParentId = null;
         closeAllModals();
     }
 }
 
 // Add new folder
-function addFolder(name) {
+function addFolder(name, parentId = null) {
     chrome.storage.sync.get(['folders'], function(result) {
         const folders = result.folders || [];
+
+        // Calculate order for new folder (last among siblings)
+        const siblings = folders.filter(f => f.parentId === parentId);
+        const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(f => f.order || 0)) + 1 : 0;
+
         const newFolder = {
             id: Date.now().toString(),
-            name: name
+            name: name,
+            parentId: parentId,
+            order: maxOrder,
+            collapsed: false
         };
-        
+
         folders.push(newFolder);
-        
+
         chrome.storage.sync.set({ folders: folders }, function() {
             loadFolders();
         });
@@ -523,7 +922,23 @@ function renameUncategorizedFolder() {
 // Show delete folder modal
 function deleteFolder(folderId) {
     currentDeleteFolderId = folderId;
-    showModal('delete-folder-modal');
+
+    // Check if folder has subfolders and update warning message
+    chrome.storage.sync.get(['folders'], function(result) {
+        const folders = result.folders || [];
+        const hasSubfolders = folders.some(f => f.parentId === folderId);
+
+        const warningElement = document.getElementById('delete-folder-warning');
+        if (hasSubfolders) {
+            warningElement.textContent = i18n.getString('deleteFolderWithSubfoldersWarning') ||
+                'All subfolders will also be deleted. Tabs in deleted folders will be moved to uncategorized.';
+        } else {
+            warningElement.textContent = i18n.getString('deleteFolderWarning') ||
+                'Tabs in this folder will be moved to uncategorized.';
+        }
+
+        showModal('delete-folder-modal');
+    });
 }
 
 // Confirm delete folder
@@ -534,32 +949,36 @@ function confirmDeleteFolder() {
     }
 }
 
-// Perform folder deletion
+// Perform folder deletion (including subfolders)
 function performDeleteFolder(folderId) {
     chrome.storage.sync.get(['folders', 'dataKeys'], function(result) {
         const folders = result.folders || [];
         const dataKeys = result.dataKeys || [];
-        
-        // Remove folder from folders list
-        const updatedFolders = folders.filter(f => f.id !== folderId);
-        
-        // Move tabs in this folder to uncategorized
+
+        // Get all descendant folder IDs to delete
+        const descendantIds = getAllDescendantIds(folders, folderId);
+        const allFolderIdsToDelete = [folderId, ...descendantIds];
+
+        // Remove folder and all descendants from folders list
+        const updatedFolders = folders.filter(f => !allFolderIdsToDelete.includes(f.id));
+
+        // Move tabs in deleted folders to uncategorized
         if (dataKeys.length > 0) {
             chrome.storage.sync.get(dataKeys, function(tabsData) {
                 const updateData = { folders: updatedFolders };
-                
+
                 dataKeys.forEach(key => {
                     const tab = tabsData[key];
-                    if (tab && tab.folderId === folderId) {
+                    if (tab && allFolderIdsToDelete.includes(tab.folderId)) {
                         tab.folderId = null;
                         updateData[key] = tab;
                     }
                 });
-                
+
                 chrome.storage.sync.set(updateData, function() {
                     loadFolders();
-                    updateAllFolderSelectsAfterDeletion(folderId);
-                    if (currentFolderId === folderId) {
+                    allFolderIdsToDelete.forEach(id => updateAllFolderSelectsAfterDeletion(id));
+                    if (allFolderIdsToDelete.includes(currentFolderId)) {
                         selectFolder(null);
                     } else {
                         // If currently viewing uncategorized folder and tabs were moved to it, reload
@@ -572,8 +991,8 @@ function performDeleteFolder(folderId) {
         } else {
             chrome.storage.sync.set({ folders: updatedFolders }, function() {
                 loadFolders();
-                updateAllFolderSelectsAfterDeletion(folderId);
-                if (currentFolderId === folderId) {
+                allFolderIdsToDelete.forEach(id => updateAllFolderSelectsAfterDeletion(id));
+                if (allFolderIdsToDelete.includes(currentFolderId)) {
                     selectFolder(null);
                 }
             });
@@ -858,25 +1277,38 @@ function deleteTab(tabId) {
     });
 }
 
-// Populate folder select dropdown
+// Populate folder select dropdown (with tree hierarchy)
 function populateFolderSelect(selectElement, currentFolderId) {
     chrome.storage.sync.get(['folders', 'uncategorizedName'], function(result) {
         const folders = result.folders || [];
         const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
-        
+
         // Clear existing options except the first one (未分類)
         selectElement.innerHTML = `<option value="null">${uncategorizedName}</option>`;
-        
-        // Add folder options
-        folders.forEach(folder => {
-            const option = document.createElement('option');
-            option.value = folder.id;
-            option.textContent = folder.name;
-            selectElement.appendChild(option);
-        });
-        
+
+        // Build tree and add options with indentation
+        const tree = buildFolderTree(folders);
+        addFolderOptionsToSelectRecursive(selectElement, tree, 0);
+
         // Set current value
         selectElement.value = currentFolderId || 'null';
+    });
+}
+
+// Add folder options to select element recursively with indentation
+function addFolderOptionsToSelectRecursive(selectElement, tree, level) {
+    tree.forEach(folder => {
+        const option = document.createElement('option');
+        option.value = folder.id;
+        // Add indentation prefix for hierarchy
+        const indent = level > 0 ? '\u00A0\u00A0'.repeat(level) + '\u2514\u00A0' : '';
+        option.textContent = indent + folder.name;
+        selectElement.appendChild(option);
+
+        // Add children recursively
+        if (folder.children && folder.children.length > 0) {
+            addFolderOptionsToSelectRecursive(selectElement, folder.children, level + 1);
+        }
     });
 }
 

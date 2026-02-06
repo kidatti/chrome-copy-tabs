@@ -342,5 +342,17 @@
   "enterTabUrl": {
     "message": "URLを入力",
     "description": "タブURL入力のプレースホルダー"
+  },
+  "addSubfolder": {
+    "message": "サブフォルダを追加",
+    "description": "サブフォルダ追加ボタンのツールチップ"
+  },
+  "cannotMoveFolder": {
+    "message": "ここにフォルダを移動できません（深度制限または循環参照）",
+    "description": "フォルダ移動が許可されない場合のエラーメッセージ"
+  },
+  "deleteFolderWithSubfoldersWarning": {
+    "message": "サブフォルダもすべて削除されます。削除されたフォルダ内のタブは未分類に移動されます。",
+    "description": "サブフォルダを含むフォルダを削除する際の警告"
   }
 } 

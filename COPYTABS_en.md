@@ -33,6 +33,10 @@ You can save reference articles and pass the list to tools like Notebook LM.
 
 # Change Log
 
+## v.0.9.4
+
+- Folder reordering and tree structure support
+
 ## v.0.9.3
 
 - Copy per page

@@ -11,8 +11,10 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 - **タブマーク**: 現在のタブまたは全タブを後で参照するためにマーク
 - **フォルダ管理**: マークしたタブをフォルダで分類・整理
   - フォルダの作成、削除、名前変更
+  - **階層構造（ツリー）**: 最大3階層までのネスト対応
+  - **ドラッグ&ドロップ**: フォルダの並び替え・階層移動
+  - **折りたたみ**: サブフォルダの展開/折りたたみ
   - タブのフォルダ間移動
-  - デフォルトフォルダ設定
   - 未分類フォルダ（フォルダなしタブ）
 - **タブ管理**: マークしたタブの表示と管理、デバイス間同期
 - **多言語対応**: 日本語/英語対応、自動検出機能
@@ -42,7 +44,8 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 
 ### リソース
 - `src/_locales/`: 翻訳ファイル (en/ja)
-- `images/`: 拡張機能アイコンとUIアセット
+- `src/images/`: 拡張機能アイコンとUIアセット
+  - `add.svg`: サブフォルダ追加ボタン用アイコン
 
 ## 技術スタック
 - **マニフェストバージョン**: 3
@@ -61,20 +64,38 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 ## フォルダ機能の詳細
 
 ### データ構造
-- **folders**: フォルダリスト `[{id, name}, ...]`
+- **folders**: フォルダリスト `[{id, name, parentId, order, collapsed}, ...]`
+  - `id`: フォルダID（タイムスタンプ）
+  - `name`: フォルダ名
+  - `parentId`: 親フォルダID（ルートは`null`）
+  - `order`: 同一階層内の順序
+  - `collapsed`: 折りたたみ状態
 - **folderId**: 各タブデータに追加されたフォルダID（既存データとの互換性維持）
-- **defaultFolderId**: 新規タブのデフォルトフォルダ設定
+- **MAX_FOLDER_DEPTH**: 最大階層数（2 = 3階層: root=0, child=1, grandchild=2）
+
+### ツリー構造ユーティリティ関数（all_tabs.js）
+- `buildFolderTree(folders, parentId)`: フラットリストをツリー構造に変換
+- `getAllDescendantIds(folders, parentId)`: 子孫フォルダID取得
+- `getFolderDepth(folders, folderId)`: フォルダの深度取得
+- `canMoveToParent(folders, folderId, newParentId)`: 循環参照・深度制限チェック
+- `getMaxSubtreeDepth(folders, folderId)`: サブツリーの最大深度取得
 
 ### UI/UX設計
-- **all_tabs.html**: 左側にフォルダサイドバー、右側にタブリスト
-- **popup.html**: Mark Tabsセクション右側にフォルダ選択UI
-- **フォルダ操作**: 作成・削除・名前変更をサポート
+- **all_tabs.html**: 左側にフォルダツリー、右側にタブリスト
+- **popup.html**: Mark Tabsセクション右側にフォルダ選択UI（階層インデント表示）
+- **フォルダ操作**: 作成・削除・名前変更・サブフォルダ追加をサポート
+- **ドラッグ&ドロップ**:
+  - 上/中/下のドロップ位置判定でビジュアルフィードバック
+  - 上/下: 同一階層での順序変更
+  - 中: 子フォルダとして移動
+- **折りたたみ**: ▶/▼アイコンで展開・折りたたみ、状態はストレージに保存
 - **タブ移動**: ドロップダウンでフォルダ間移動
 - **カウント表示**: 各フォルダのタブ数を表示
 
 ### マイグレーション対応
-- 既存データに`folderId: null`を自動追加
-- フォルダ削除時は含まれるタブを未分類に移動
+- 既存データに`folderId: null`を自動追加（タブデータ）
+- 既存フォルダに`parentId: null`, `order: index`, `collapsed: false`を自動追加
+- フォルダ削除時はサブフォルダも削除、含まれるタブは未分類に移動
 - 下位互換性を維持したデータ移行
 
 ## ビルドとデプロイ
@@ -103,3 +124,8 @@ make release
 - ビルド出力: `dist/` ディレクトリ
 - パッケージ名: `copytabs-v{VERSION}.zip` (manifest.jsonのversionを使用)
 - Chrome Web Store用zipファイルを自動生成
+
+### バージョンアップ時の更新対象
+- `src/manifest.json`: `version` フィールドを更新
+- `COPYTABS_ja.md`: 日本語の更新履歴を追加
+- `COPYTABS_en.md`: 英語の更新履歴を追加

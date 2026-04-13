@@ -9,7 +9,7 @@ let addSubfolderParentId = null;
 // Maximum folder depth (3 levels: root=0, child=1, grandchild=2)
 const MAX_FOLDER_DEPTH = 2;
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", async function() {
     // Wait for i18n object to be loaded
     if (typeof i18n === 'undefined') {
         console.error('i18n object is not loaded');
@@ -17,18 +17,17 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Load language setting first, then initialize UI
-    chrome.storage.sync.get(['language'], function(result) {
-        if (result.language) {
-            if (result.language !== 'auto') {
-                i18n.setLanguage(result.language);
-            } else {
-                i18n.setLanguage('auto');
-            }
+    const result = await chrome.storage.sync.get(['language']);
+    if (result.language) {
+        if (result.language !== 'auto') {
+            i18n.setLanguage(result.language);
+        } else {
+            i18n.setLanguage('auto');
         }
+    }
 
-        // Initialize UI after language is loaded
-        initializeUI();
-    });
+    // Initialize UI after language is loaded
+    initializeUI();
 });
 
 function initializeUI() {
@@ -129,69 +128,43 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 });
 
 // Function to clean up duplicate dataKeys
-function cleanupDuplicateDataKeys() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
-            
-            if (dataKeys.length === 0) {
-                resolve();
-                return;
-            }
-            
-            // Remove duplicates from dataKeys
-            const uniqueDataKeys = [...new Set(dataKeys)];
-            
-            if (uniqueDataKeys.length !== dataKeys.length) {
-                console.log(`Found duplicate dataKeys. Cleaning up: ${dataKeys.length} -> ${uniqueDataKeys.length}`);
-                
-                chrome.storage.sync.set({ dataKeys: uniqueDataKeys }, function() {
-                    console.log("DataKeys cleaned up successfully");
-                    resolve();
-                });
-            } else {
-                resolve();
-            }
-        });
-    });
+async function cleanupDuplicateDataKeys() {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    if (dataKeys.length === 0) return;
+
+    const uniqueDataKeys = [...new Set(dataKeys)];
+
+    if (uniqueDataKeys.length !== dataKeys.length) {
+        console.log(`Found duplicate dataKeys. Cleaning up: ${dataKeys.length} -> ${uniqueDataKeys.length}`);
+        await chrome.storage.sync.set({ dataKeys: uniqueDataKeys });
+        console.log("DataKeys cleaned up successfully");
+    }
 }
 
 // Function to migrate from old markedTabs format to new dataKeys format
-function migrateFromMarkedTabs() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['markedTabs'], function(result) {
-            if (!result.markedTabs) {
-                // No markedTabs data to migrate
-                resolve();
-                return;
-            }
+async function migrateFromMarkedTabs() {
+    const result = await chrome.storage.sync.get(['markedTabs']);
+    if (!result.markedTabs) return;
 
-            const markedTabs = result.markedTabs;
-            const dataKeys = [];
-            const storageData = {};
+    const markedTabs = result.markedTabs;
+    const dataKeys = [];
+    const storageData = {};
 
-            // Create new format data
-            markedTabs.forEach((tab, index) => {
-                const keyName = `mark-${index + 1}`;
-                dataKeys.push(keyName);
-                storageData[keyName] = tab;
-            });
-
-            // Add dataKeys to storage data
-            storageData.dataKeys = dataKeys;
-
-            // Save new format data
-            chrome.storage.sync.set(storageData, function() {
-                console.log("Migration completed: converted markedTabs to dataKeys format");
-                
-                // Remove old markedTabs data
-                chrome.storage.sync.remove(['markedTabs'], function() {
-                    console.log("Removed old markedTabs data");
-                    resolve();
-                });
-            });
-        });
+    markedTabs.forEach((tab, index) => {
+        const keyName = `mark-${index + 1}`;
+        dataKeys.push(keyName);
+        storageData[keyName] = tab;
     });
+
+    storageData.dataKeys = dataKeys;
+
+    await chrome.storage.sync.set(storageData);
+    console.log("Migration completed: converted markedTabs to dataKeys format");
+
+    await chrome.storage.sync.remove(['markedTabs']);
+    console.log("Removed old markedTabs data");
 }
 
 // Initialize modal texts
@@ -319,79 +292,58 @@ function closeAllModals() {
 }
 
 // Migrate data to include folder support
-function migrateToFolderSupport() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
+async function migrateToFolderSupport() {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-            if (dataKeys.length === 0) {
-                resolve();
-                return;
-            }
+    if (dataKeys.length === 0) return;
 
-            chrome.storage.sync.get(dataKeys, function(tabsData) {
-                const updateData = {};
-                let hasUpdates = false;
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const updateData = {};
+    let hasUpdates = false;
 
-                dataKeys.forEach(key => {
-                    const tab = tabsData[key];
-                    if (tab && !tab.hasOwnProperty('folderId')) {
-                        tab.folderId = null;
-                        updateData[key] = tab;
-                        hasUpdates = true;
-                    }
-                });
-
-                if (hasUpdates) {
-                    chrome.storage.sync.set(updateData, function() {
-                        console.log("Migration completed: added folderId to existing tabs");
-                        resolve();
-                    });
-                } else {
-                    resolve();
-                }
-            });
-        });
+    dataKeys.forEach(key => {
+        const tab = tabsData[key];
+        if (tab && !tab.hasOwnProperty('folderId')) {
+            tab.folderId = null;
+            updateData[key] = tab;
+            hasUpdates = true;
+        }
     });
+
+    if (hasUpdates) {
+        await chrome.storage.sync.set(updateData);
+        console.log("Migration completed: added folderId to existing tabs");
+    }
 }
 
 // Migrate folders to tree structure (add parentId, order, collapsed)
-function migrateToTreeStructure() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['folders'], function(result) {
-            const folders = result.folders || [];
+async function migrateToTreeStructure() {
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
 
-            if (folders.length === 0) {
-                resolve();
-                return;
-            }
+    if (folders.length === 0) return;
 
-            let hasUpdates = false;
-            folders.forEach((folder, index) => {
-                if (!folder.hasOwnProperty('parentId')) {
-                    folder.parentId = null;
-                    hasUpdates = true;
-                }
-                if (!folder.hasOwnProperty('order')) {
-                    folder.order = index;
-                    hasUpdates = true;
-                }
-                if (!folder.hasOwnProperty('collapsed')) {
-                    folder.collapsed = false;
-                    hasUpdates = true;
-                }
-            });
-
-            if (hasUpdates) {
-                chrome.storage.sync.set({ folders: folders }, function() {
-                    console.log("Migration completed: added parentId, order, collapsed to folders");
-                    resolve();
-                });
-            } else {
-                resolve();
-            }
-        });
+    let hasUpdates = false;
+    folders.forEach((folder, index) => {
+        if (!folder.hasOwnProperty('parentId')) {
+            folder.parentId = null;
+            hasUpdates = true;
+        }
+        if (!folder.hasOwnProperty('order')) {
+            folder.order = index;
+            hasUpdates = true;
+        }
+        if (!folder.hasOwnProperty('collapsed')) {
+            folder.collapsed = false;
+            hasUpdates = true;
+        }
     });
+
+    if (hasUpdates) {
+        await chrome.storage.sync.set({ folders: folders });
+        console.log("Migration completed: added parentId, order, collapsed to folders");
+    }
 }
 
 // Build folder tree from flat list
@@ -471,24 +423,23 @@ function getMaxSubtreeDepth(folders, folderId) {
 }
 
 // Load folders
-function loadFolders() {
-    migrateToTreeStructure().then(() => {
-        chrome.storage.sync.get(['folders'], function(result) {
-            const folders = result.folders || [];
-            const folderList = document.getElementById('folder-list');
+async function loadFolders() {
+    await migrateToTreeStructure();
 
-            // Clear existing folders (except "未分類")
-            const uncategorized = folderList.querySelector('[data-folder-id="null"]');
-            folderList.innerHTML = '';
-            folderList.appendChild(uncategorized);
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
+    const folderList = document.getElementById('folder-list');
 
-            // Build and render tree structure
-            const tree = buildFolderTree(folders);
-            renderFolderTree(tree, folderList, 0, folders);
+    // Clear existing folders (except "未分類")
+    const uncategorized = folderList.querySelector('[data-folder-id="null"]');
+    folderList.innerHTML = '';
+    folderList.appendChild(uncategorized);
 
-            updateFolderCounts();
-        });
-    });
+    // Build and render tree structure
+    const tree = buildFolderTree(folders);
+    renderFolderTree(tree, folderList, 0, folders);
+
+    updateFolderCounts();
 }
 
 // Render folder tree recursively
@@ -520,26 +471,65 @@ function createFolderElement(folder, level = 0, allFolders = []) {
         ? (folder.collapsed ? 'folder-toggle has-children' : 'folder-toggle has-children expanded')
         : 'folder-toggle';
 
-    folderElement.innerHTML = `
-        <div class="folder-left">
-            <span class="${toggleClass}" data-folder-id="${folder.id}"></span>
-            <div class="folder-name">${folder.name}</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="folder-actions">
-                ${canAddChild ? `<button class="folder-btn add-subfolder-btn" data-folder-id="${folder.id}" title="${i18n.getString('addSubfolder') || 'Add Subfolder'}">
-                    <img src="images/add.svg" alt="Add">
-                </button>` : ''}
-                <button class="folder-btn rename-folder-btn" data-folder-id="${folder.id}">
-                    <img src="images/edit.svg" alt="Edit">
-                </button>
-                <button class="folder-btn delete-folder-btn" data-folder-id="${folder.id}">
-                    <img src="images/delete.svg" alt="Delete">
-                </button>
-            </div>
-            <div class="folder-count">0</div>
-        </div>
-    `;
+    // Build folder element using DOM API for XSS safety
+    const folderLeft = document.createElement('div');
+    folderLeft.className = 'folder-left';
+
+    const toggleSpan = document.createElement('span');
+    toggleSpan.className = toggleClass;
+    toggleSpan.setAttribute('data-folder-id', folder.id);
+    folderLeft.appendChild(toggleSpan);
+
+    const folderNameDiv = document.createElement('div');
+    folderNameDiv.className = 'folder-name';
+    folderNameDiv.textContent = folder.name;
+    folderLeft.appendChild(folderNameDiv);
+
+    const rightDiv = document.createElement('div');
+    rightDiv.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'folder-actions';
+
+    if (canAddChild) {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'folder-btn add-subfolder-btn';
+        addBtn.setAttribute('data-folder-id', folder.id);
+        addBtn.title = i18n.getString('addSubfolder') || 'Add Subfolder';
+        const addImg = document.createElement('img');
+        addImg.src = 'images/add.svg';
+        addImg.alt = 'Add';
+        addBtn.appendChild(addImg);
+        actionsDiv.appendChild(addBtn);
+    }
+
+    const renameBtn = document.createElement('button');
+    renameBtn.className = 'folder-btn rename-folder-btn';
+    renameBtn.setAttribute('data-folder-id', folder.id);
+    const renameImg = document.createElement('img');
+    renameImg.src = 'images/edit.svg';
+    renameImg.alt = 'Edit';
+    renameBtn.appendChild(renameImg);
+    actionsDiv.appendChild(renameBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'folder-btn delete-folder-btn';
+    deleteBtn.setAttribute('data-folder-id', folder.id);
+    const deleteImg = document.createElement('img');
+    deleteImg.src = 'images/delete.svg';
+    deleteImg.alt = 'Delete';
+    deleteBtn.appendChild(deleteImg);
+    actionsDiv.appendChild(deleteBtn);
+
+    rightDiv.appendChild(actionsDiv);
+
+    const countDiv = document.createElement('div');
+    countDiv.className = 'folder-count';
+    countDiv.textContent = '0';
+    rightDiv.appendChild(countDiv);
+
+    folderElement.appendChild(folderLeft);
+    folderElement.appendChild(rightDiv);
 
     folderElement.addEventListener('click', function(e) {
         // Don't select if clicking on toggle
@@ -548,19 +538,14 @@ function createFolderElement(folder, level = 0, allFolders = []) {
     });
 
     // Add event listener for collapse/expand toggle
-    const toggleBtn = folderElement.querySelector('.folder-toggle');
     if (hasChildren) {
-        toggleBtn.addEventListener('click', function(e) {
+        toggleSpan.addEventListener('click', function(e) {
             e.stopPropagation();
             toggleFolderCollapse(folder.id);
         });
     }
 
     // Add event listeners for rename and delete buttons
-    const renameBtn = folderElement.querySelector('.rename-folder-btn');
-    const deleteBtn = folderElement.querySelector('.delete-folder-btn');
-    const addSubfolderBtn = folderElement.querySelector('.add-subfolder-btn');
-
     renameBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         renameFolderDialog(folder.id);
@@ -571,7 +556,8 @@ function createFolderElement(folder, level = 0, allFolders = []) {
         deleteFolder(folder.id);
     });
 
-    if (addSubfolderBtn) {
+    if (canAddChild) {
+        const addSubfolderBtn = actionsDiv.querySelector('.add-subfolder-btn');
         addSubfolderBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             showAddSubfolderModal(folder.id);
@@ -589,18 +575,53 @@ function createFolderElement(folder, level = 0, allFolders = []) {
 }
 
 // Toggle folder collapse state
-function toggleFolderCollapse(folderId) {
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
-        const folder = folders.find(f => f.id === folderId);
+async function toggleFolderCollapse(folderId) {
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
+    const folder = folders.find(f => f.id === folderId);
 
-        if (folder) {
-            folder.collapsed = !folder.collapsed;
-            chrome.storage.sync.set({ folders: folders }, function() {
-                loadFolders();
-            });
+    if (folder) {
+        folder.collapsed = !folder.collapsed;
+        await chrome.storage.sync.set({ folders: folders });
+
+        // Partial DOM update: toggle icon and show/hide children
+        const folderElement = document.querySelector(`.folder-item[data-folder-id="${folderId}"]`);
+        if (folderElement) {
+            const toggleSpan = folderElement.querySelector('.folder-toggle');
+            if (toggleSpan) {
+                toggleSpan.className = folder.collapsed
+                    ? 'folder-toggle has-children'
+                    : 'folder-toggle has-children expanded';
+            }
+
+            const level = parseInt(folderElement.getAttribute('data-level')) || 0;
+            const descendantIds = getAllDescendantIds(folders, folderId);
+
+            if (folder.collapsed) {
+                // Remove all descendant folder elements from DOM
+                descendantIds.forEach(id => {
+                    const childEl = document.querySelector(`.folder-item[data-folder-id="${id}"]`);
+                    if (childEl) childEl.remove();
+                });
+            } else {
+                // Re-render child folders after this element
+                const tree = buildFolderTree(folders, folderId);
+                let insertAfter = folderElement;
+                const renderChildren = (children, lvl) => {
+                    children.forEach(child => {
+                        const childElement = createFolderElement(child, lvl, folders);
+                        insertAfter.parentNode.insertBefore(childElement, insertAfter.nextSibling);
+                        insertAfter = childElement;
+                        if (child.children && child.children.length > 0 && !child.collapsed) {
+                            renderChildren(child.children, lvl + 1);
+                        }
+                    });
+                };
+                renderChildren(tree, level + 1);
+            }
         }
-    });
+        updateFolderCounts();
+    }
 }
 
 // Show add subfolder modal
@@ -626,6 +647,18 @@ function handleFolderDragStart(e) {
 function handleFolderDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
+    // Check if this is a tab being dragged onto a folder
+    const isTabDrag = e.dataTransfer.types.includes('application/tab-id');
+
+    if (isTabDrag) {
+        // Tab-to-folder drop: highlight the entire folder
+        document.querySelectorAll('.folder-item').forEach(item => {
+            item.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside', 'tab-drop-target');
+        });
+        this.classList.add('tab-drop-target');
+        return false;
+    }
 
     if (!draggedFolderElement || this === draggedFolderElement) return;
 
@@ -655,12 +688,22 @@ function handleFolderDragOver(e) {
 }
 
 function handleFolderDragLeave(e) {
-    this.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+    this.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside', 'tab-drop-target');
 }
 
 function handleFolderDrop(e) {
     e.preventDefault();
     e.stopPropagation();
+
+    // Check if this is a tab being dropped onto a folder
+    const tabId = e.dataTransfer.getData('application/tab-id');
+    if (tabId) {
+        this.classList.remove('tab-drop-target');
+        const targetFolderId = this.getAttribute('data-folder-id');
+        const folderId = targetFolderId === 'null' ? null : targetFolderId;
+        moveTabToFolder(tabId, folderId);
+        return false;
+    }
 
     if (!draggedFolderElement || this === draggedFolderElement) return;
 
@@ -701,91 +744,79 @@ function handleFolderDragEnd(e) {
 
     // Remove all drop indicators
     document.querySelectorAll('.folder-item').forEach(item => {
-        item.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside');
+        item.classList.remove('drag-over-above', 'drag-over-below', 'drag-over-inside', 'tab-drop-target');
     });
 
     draggedFolderElement = null;
 }
 
 // Move folder to new position
-function moveFolder(draggedId, targetId, position) {
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
+async function moveFolder(draggedId, targetId, position) {
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
 
-        const draggedFolder = folders.find(f => f.id === draggedId);
-        const targetFolder = folders.find(f => f.id === targetId);
+    const draggedFolder = folders.find(f => f.id === draggedId);
+    const targetFolder = folders.find(f => f.id === targetId);
 
-        if (!draggedFolder || !targetFolder) return;
+    if (!draggedFolder || !targetFolder) return;
 
-        let newParentId;
-        let newOrder;
+    let newParentId;
+    let newOrder;
 
-        if (position === 'inside') {
-            // Move as child of target
-            newParentId = targetId;
+    if (position === 'inside') {
+        newParentId = targetId;
 
-            // Check if move is valid
-            if (!canMoveToParent(folders, draggedId, newParentId)) {
-                showToast(i18n.getString('cannotMoveFolder') || 'Cannot move folder here (depth limit or cycle)', 'error');
-                return;
-            }
-
-            // Get order as last child
-            const children = folders.filter(f => f.parentId === newParentId);
-            newOrder = children.length > 0 ? Math.max(...children.map(f => f.order || 0)) + 1 : 0;
-
-            // Expand parent if collapsed
-            targetFolder.collapsed = false;
-        } else {
-            // Move as sibling (above or below target)
-            newParentId = targetFolder.parentId;
-
-            // Check if move is valid
-            if (!canMoveToParent(folders, draggedId, newParentId)) {
-                showToast(i18n.getString('cannotMoveFolder') || 'Cannot move folder here (depth limit or cycle)', 'error');
-                return;
-            }
-
-            // Get siblings and recalculate order
-            const siblings = folders
-                .filter(f => f.parentId === newParentId && f.id !== draggedId)
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            const targetIndex = siblings.findIndex(f => f.id === targetId);
-
-            if (position === 'above') {
-                newOrder = targetIndex >= 0 ? targetIndex : 0;
-            } else {
-                newOrder = targetIndex >= 0 ? targetIndex + 1 : siblings.length;
-            }
-
-            // Shift orders for affected siblings
-            siblings.forEach((sibling, index) => {
-                if (index >= newOrder) {
-                    sibling.order = index + 1;
-                } else {
-                    sibling.order = index;
-                }
-            });
+        if (!canMoveToParent(folders, draggedId, newParentId)) {
+            showToast(i18n.getString('cannotMoveFolder') || 'Cannot move folder here (depth limit or cycle)', 'error');
+            return;
         }
 
-        // Update dragged folder
-        draggedFolder.parentId = newParentId;
-        draggedFolder.order = newOrder;
+        const children = folders.filter(f => f.parentId === newParentId);
+        newOrder = children.length > 0 ? Math.max(...children.map(f => f.order || 0)) + 1 : 0;
 
-        // Recalculate all orders for siblings
-        const allSiblings = folders
-            .filter(f => f.parentId === newParentId)
+        targetFolder.collapsed = false;
+    } else {
+        newParentId = targetFolder.parentId;
+
+        if (!canMoveToParent(folders, draggedId, newParentId)) {
+            showToast(i18n.getString('cannotMoveFolder') || 'Cannot move folder here (depth limit or cycle)', 'error');
+            return;
+        }
+
+        const siblings = folders
+            .filter(f => f.parentId === newParentId && f.id !== draggedId)
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        allSiblings.forEach((sibling, index) => {
-            sibling.order = index;
-        });
+        const targetIndex = siblings.findIndex(f => f.id === targetId);
 
-        chrome.storage.sync.set({ folders: folders }, function() {
-            loadFolders();
+        if (position === 'above') {
+            newOrder = targetIndex >= 0 ? targetIndex : 0;
+        } else {
+            newOrder = targetIndex >= 0 ? targetIndex + 1 : siblings.length;
+        }
+
+        siblings.forEach((sibling, index) => {
+            if (index >= newOrder) {
+                sibling.order = index + 1;
+            } else {
+                sibling.order = index;
+            }
         });
+    }
+
+    draggedFolder.parentId = newParentId;
+    draggedFolder.order = newOrder;
+
+    const allSiblings = folders
+        .filter(f => f.parentId === newParentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    allSiblings.forEach((sibling, index) => {
+        sibling.order = index;
     });
+
+    await chrome.storage.sync.set({ folders: folders });
+    loadFolders();
 }
 
 // Select folder
@@ -814,131 +845,125 @@ function showAddFolderModal() {
 // Confirm add folder
 function confirmAddFolder() {
     const name = document.getElementById('folder-name-input').value.trim();
-    if (name) {
-        addFolder(name, addSubfolderParentId);
-        addSubfolderParentId = null;
-        closeAllModals();
+    if (!name) return;
+    if (name.length > 50) {
+        showToast(i18n.getString('folderNameTooLong') || 'Folder name must be 50 characters or less', 'error');
+        return;
     }
+    addFolder(name, addSubfolderParentId);
+    addSubfolderParentId = null;
+    closeAllModals();
 }
 
 // Add new folder
-function addFolder(name, parentId = null) {
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
+async function addFolder(name, parentId = null) {
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
 
-        // Calculate order for new folder (last among siblings)
-        const siblings = folders.filter(f => f.parentId === parentId);
-        const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(f => f.order || 0)) + 1 : 0;
+    const siblings = folders.filter(f => f.parentId === parentId);
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(f => f.order || 0)) + 1 : 0;
 
-        const newFolder = {
-            id: Date.now().toString(),
-            name: name,
-            parentId: parentId,
-            order: maxOrder,
-            collapsed: false
-        };
+    const newFolder = {
+        id: Date.now().toString(),
+        name: name,
+        parentId: parentId,
+        order: maxOrder,
+        collapsed: false
+    };
 
-        folders.push(newFolder);
+    folders.push(newFolder);
 
-        chrome.storage.sync.set({ folders: folders }, function() {
-            loadFolders();
-        });
-    });
+    await chrome.storage.sync.set({ folders: folders });
+    loadFolders();
 }
 
 // Show rename folder modal
-function renameFolderDialog(folderId) {
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
-        const folder = folders.find(f => f.id === folderId);
-        
-        if (folder) {
-            currentRenameFolderId = folderId;
-            document.getElementById('rename-folder-input').value = folder.name;
-            showModal('rename-folder-modal');
-            setTimeout(() => {
-                const input = document.getElementById('rename-folder-input');
-                input.focus();
-                input.select();
-            }, 100);
-        }
-    });
-}
+async function renameFolderDialog(folderId) {
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
+    const folder = folders.find(f => f.id === folderId);
 
-// Confirm rename folder
-function confirmRenameFolder() {
-    const newName = document.getElementById('rename-folder-input').value.trim();
-    if (newName && currentRenameFolderId) {
-        if (currentRenameFolderId === 'uncategorized') {
-            renameUncategorized(newName);
-        } else {
-            renameFolder(currentRenameFolderId, newName);
-        }
-        closeAllModals();
-    }
-}
-
-// Rename uncategorized folder
-function renameUncategorized(newName) {
-    chrome.storage.sync.set({ uncategorizedName: newName }, function() {
-        // Update UI immediately
-        document.getElementById('uncategorized-name').textContent = newName;
-        updateUncategorizedNameInUI(newName);
-    });
-}
-
-// Rename folder
-function renameFolder(folderId, newName) {
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
-        const folderIndex = folders.findIndex(f => f.id === folderId);
-        
-        if (folderIndex !== -1) {
-            folders[folderIndex].name = newName;
-            
-            chrome.storage.sync.set({ folders: folders }, function() {
-                loadFolders();
-            });
-        }
-    });
-}
-
-// Rename uncategorized folder
-function renameUncategorizedFolder() {
-    chrome.storage.sync.get(['uncategorizedName'], function(result) {
-        const currentName = result.uncategorizedName || i18n.getString('uncategorized');
-        
-        currentRenameFolderId = 'uncategorized';
-        document.getElementById('rename-folder-input').value = currentName;
+    if (folder) {
+        currentRenameFolderId = folderId;
+        document.getElementById('rename-folder-input').value = folder.name;
         showModal('rename-folder-modal');
         setTimeout(() => {
             const input = document.getElementById('rename-folder-input');
             input.focus();
             input.select();
         }, 100);
-    });
+    }
+}
+
+// Confirm rename folder
+function confirmRenameFolder() {
+    const newName = document.getElementById('rename-folder-input').value.trim();
+    if (!newName || !currentRenameFolderId) return;
+    if (newName.length > 50) {
+        showToast(i18n.getString('folderNameTooLong') || 'Folder name must be 50 characters or less', 'error');
+        return;
+    }
+    if (currentRenameFolderId === 'uncategorized') {
+        renameUncategorized(newName);
+    } else {
+        renameFolder(currentRenameFolderId, newName);
+    }
+    closeAllModals();
+}
+
+// Rename uncategorized folder
+async function renameUncategorized(newName) {
+    await chrome.storage.sync.set({ uncategorizedName: newName });
+    document.getElementById('uncategorized-name').textContent = newName;
+    updateUncategorizedNameInUI(newName);
+}
+
+// Rename folder
+async function renameFolder(folderId, newName) {
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
+    const folderIndex = folders.findIndex(f => f.id === folderId);
+
+    if (folderIndex !== -1) {
+        folders[folderIndex].name = newName;
+        await chrome.storage.sync.set({ folders: folders });
+        loadFolders();
+    }
+}
+
+// Rename uncategorized folder
+async function renameUncategorizedFolder() {
+    const result = await chrome.storage.sync.get(['uncategorizedName']);
+    const currentName = result.uncategorizedName || i18n.getString('uncategorized');
+
+    currentRenameFolderId = 'uncategorized';
+    document.getElementById('rename-folder-input').value = currentName;
+    showModal('rename-folder-modal');
+    setTimeout(() => {
+        const input = document.getElementById('rename-folder-input');
+        input.focus();
+        input.select();
+    }, 100);
 }
 
 // Show delete folder modal
-function deleteFolder(folderId) {
+async function deleteFolder(folderId) {
     currentDeleteFolderId = folderId;
 
-    // Check if folder has subfolders and update warning message
-    chrome.storage.sync.get(['folders'], function(result) {
-        const folders = result.folders || [];
-        const hasSubfolders = folders.some(f => f.parentId === folderId);
+    const result = await chrome.storage.sync.get(['folders']);
+    const folders = result.folders || [];
+    const hasSubfolders = folders.some(f => f.parentId === folderId);
 
-        const warningElement = document.getElementById('delete-folder-warning');
-        if (hasSubfolders) {
-            warningElement.textContent = i18n.getString('deleteFolderWithSubfoldersWarning') ||
-                'All subfolders will also be deleted. Tabs in deleted folders will be moved to uncategorized.';
-        } else {
-            warningElement.textContent = i18n.getString('deleteFolderWarning') ||
-                'Tabs in this folder will be moved to uncategorized.';
-        }
+    const warningElement = document.getElementById('delete-folder-warning');
+    if (hasSubfolders) {
+        warningElement.textContent = i18n.getString('deleteFolderWithSubfoldersWarning') ||
+            'All subfolders will also be deleted. Tabs in deleted folders will be moved to uncategorized.';
+    } else {
+        warningElement.textContent = i18n.getString('deleteFolderWarning') ||
+            'Tabs in this folder will be moved to uncategorized.';
+    }
 
-        showModal('delete-folder-modal');
-    });
+    showModal('delete-folder-modal');
 }
 
 // Confirm delete folder
@@ -950,54 +975,38 @@ function confirmDeleteFolder() {
 }
 
 // Perform folder deletion (including subfolders)
-function performDeleteFolder(folderId) {
-    chrome.storage.sync.get(['folders', 'dataKeys'], function(result) {
-        const folders = result.folders || [];
-        const dataKeys = result.dataKeys || [];
+async function performDeleteFolder(folderId) {
+    const result = await chrome.storage.sync.get(['folders', 'dataKeys']);
+    const folders = result.folders || [];
+    const dataKeys = result.dataKeys || [];
 
-        // Get all descendant folder IDs to delete
-        const descendantIds = getAllDescendantIds(folders, folderId);
-        const allFolderIdsToDelete = [folderId, ...descendantIds];
+    const descendantIds = getAllDescendantIds(folders, folderId);
+    const allFolderIdsToDelete = [folderId, ...descendantIds];
 
-        // Remove folder and all descendants from folders list
-        const updatedFolders = folders.filter(f => !allFolderIdsToDelete.includes(f.id));
+    const updatedFolders = folders.filter(f => !allFolderIdsToDelete.includes(f.id));
 
-        // Move tabs in deleted folders to uncategorized
-        if (dataKeys.length > 0) {
-            chrome.storage.sync.get(dataKeys, function(tabsData) {
-                const updateData = { folders: updatedFolders };
+    const updateData = { folders: updatedFolders };
 
-                dataKeys.forEach(key => {
-                    const tab = tabsData[key];
-                    if (tab && allFolderIdsToDelete.includes(tab.folderId)) {
-                        tab.folderId = null;
-                        updateData[key] = tab;
-                    }
-                });
+    if (dataKeys.length > 0) {
+        const tabsData = await chrome.storage.sync.get(dataKeys);
 
-                chrome.storage.sync.set(updateData, function() {
-                    loadFolders();
-                    allFolderIdsToDelete.forEach(id => updateAllFolderSelectsAfterDeletion(id));
-                    if (allFolderIdsToDelete.includes(currentFolderId)) {
-                        selectFolder(null);
-                    } else {
-                        // If currently viewing uncategorized folder and tabs were moved to it, reload
-                        if (currentFolderId === null) {
-                            loadAllMarkedTabs();
-                        }
-                    }
-                });
-            });
-        } else {
-            chrome.storage.sync.set({ folders: updatedFolders }, function() {
-                loadFolders();
-                allFolderIdsToDelete.forEach(id => updateAllFolderSelectsAfterDeletion(id));
-                if (allFolderIdsToDelete.includes(currentFolderId)) {
-                    selectFolder(null);
-                }
-            });
-        }
-    });
+        dataKeys.forEach(key => {
+            const tab = tabsData[key];
+            if (tab && allFolderIdsToDelete.includes(tab.folderId)) {
+                tab.folderId = null;
+                updateData[key] = tab;
+            }
+        });
+    }
+
+    await chrome.storage.sync.set(updateData);
+    loadFolders();
+    allFolderIdsToDelete.forEach(id => updateAllFolderSelectsAfterDeletion(id));
+    if (allFolderIdsToDelete.includes(currentFolderId)) {
+        selectFolder(null);
+    } else if (currentFolderId === null) {
+        loadAllMarkedTabs();
+    }
 }
 
 // Update all folder select dropdowns
@@ -1021,278 +1030,286 @@ function updateAllFolderSelectsAfterDeletion(deletedFolderId) {
 }
 
 // Update folder counts
-function updateFolderCounts() {
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        
-        if (dataKeys.length === 0) {
-            // Set all counts to 0
-            document.querySelectorAll('.folder-count').forEach(el => {
-                el.textContent = '0';
-            });
-            return;
-        }
-        
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            const folderCounts = {};
-            
-            dataKeys.forEach(key => {
-                const tab = tabsData[key];
-                if (tab) {
-                    const folderId = tab.folderId || 'null';
-                    folderCounts[folderId] = (folderCounts[folderId] || 0) + 1;
-                }
-            });
-            
-            // Update counts in UI
-            document.querySelectorAll('.folder-item').forEach(item => {
-                const folderId = item.getAttribute('data-folder-id');
-                const count = folderCounts[folderId] || 0;
-                const countElement = item.querySelector('.folder-count');
-                if (countElement) {
-                    countElement.textContent = count;
-                }
-            });
+async function updateFolderCounts() {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    if (dataKeys.length === 0) {
+        document.querySelectorAll('.folder-count').forEach(el => {
+            el.textContent = '0';
         });
+        return;
+    }
+
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const folderCounts = {};
+
+    dataKeys.forEach(key => {
+        const tab = tabsData[key];
+        if (tab) {
+            const folderId = tab.folderId || 'null';
+            folderCounts[folderId] = (folderCounts[folderId] || 0) + 1;
+        }
+    });
+
+    document.querySelectorAll('.folder-item').forEach(item => {
+        const folderId = item.getAttribute('data-folder-id');
+        const count = folderCounts[folderId] || 0;
+        const countElement = item.querySelector('.folder-count');
+        if (countElement) {
+            countElement.textContent = count;
+        }
     });
 }
 
-function loadAllMarkedTabs() {
+async function loadAllMarkedTabs() {
     const tabList = document.getElementById('tab-list');
     tabList.innerHTML = '';
-    
+
     // Check for and migrate old format and folder support, then cleanup duplicates
-    migrateFromMarkedTabs().then(() => {
-        return migrateToFolderSupport();
-    }).then(() => {
-        return cleanupDuplicateDataKeys();
-    }).then(() => {
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
-            
-            if (dataKeys.length === 0) {
-                tabList.innerHTML = `
-                    <div class="no-tabs">
-                        ${i18n.getString('noMarkedTabs')}
-                        <div style="margin-top: 20px;">
-                            <button id="open-options" style="padding: 10px 20px; background-color: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                ${i18n.getString('settingsTitle')}
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                // Add event listener to open options page
-                document.getElementById('open-options').addEventListener('click', function() {
-                    chrome.runtime.openOptionsPage();
-                });
-                updateFolderCounts();
-                return;
-            }
-            
-            // Get all tab data using the dataKeys
-            chrome.storage.sync.get(dataKeys, function(tabsData) {
-                let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
-                
-                // Filter tabs by current folder
-                if (currentFolderId !== null) {
-                    allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
-                } else {
-                    allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
-                }
+    await migrateFromMarkedTabs();
+    await migrateToFolderSupport();
+    await cleanupDuplicateDataKeys();
 
-                // Sort tabs by order (if exists) or timestamp
-                allTabs.sort((a, b) => {
-                    const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
-                    const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
-                    return orderA - orderB;
-                });
-                
-                if (allTabs.length === 0) {
-                    tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
-                    updateFolderCounts();
-                    return;
-                }
-                
-                allTabs.forEach((tab, index) => {
-                    // Ensure locked property exists for backward compatibility
-                    if (tab.locked === undefined) {
-                        tab.locked = false;
-                    }
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-                    // Ensure order property exists for drag and drop
-                    if (tab.order === undefined) {
-                        tab.order = index;
-                    }
+    if (dataKeys.length === 0) {
+        tabList.innerHTML = `
+            <div class="no-tabs">
+                ${i18n.getString('noMarkedTabs')}
+                <div style="margin-top: 20px;">
+                    <button id="open-options" style="padding: 10px 20px; background-color: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        ${i18n.getString('settingsTitle')}
+                    </button>
+                </div>
+            </div>
+        `;
 
-                    const tabElement = document.createElement('div');
-                    tabElement.className = 'tab-item';
-                    tabElement.setAttribute('draggable', 'true');
-                    tabElement.setAttribute('data-tab-id', tab.id);
-
-                    // Format the date
-                    const date = new Date(tab.timestamp);
-                    const formattedDate = date.toLocaleString();
-                    
-                    const uncategorizedName = i18n.getString('uncategorized') || 'Uncategorized';
-
-                    tabElement.innerHTML = `
-                        <div class="tab-info" data-url="${tab.url}">
-                            <div class="tab-title">${tab.title}</div>
-                            <div class="tab-url">${tab.url}</div>
-                            <div class="timestamp">${formattedDate}</div>
-                        </div>
-                        <div class="tab-controls">
-                            <select class="folder-select" data-id="${tab.id}">
-                                <option value="null">${uncategorizedName}</option>
-                            </select>
-                            <img class="copy-icon"
-                                 src="images/copy.svg"
-                                 alt="Copy"
-                                 title="${i18n.getString('copyButton')}"
-                                 data-id="${tab.id}">
-                            <img class="lock-icon ${tab.locked ? 'locked' : ''}"
-                                 src="images/${tab.locked ? 'lock' : 'unlock'}.svg"
-                                 alt="${tab.locked ? 'Locked' : 'Unlocked'}"
-                                 data-id="${tab.id}">
-                            <img class="edit-icon"
-                                 src="images/edit.svg"
-                                 alt="Edit"
-                                 title="${i18n.getString('editTab')}"
-                                 data-id="${tab.id}">
-                            <img class="delete-icon"
-                                 src="images/delete.svg"
-                                 alt="Delete"
-                                 title="${i18n.getString('deleteButton')}"
-                                 data-id="${tab.id}"
-                                 ${tab.locked ? 'style="display: none;"' : ''}>
-                        </div>
-                    `;
-                    
-                    // Add click event to open the tab
-                    const tabInfo = tabElement.querySelector('.tab-info');
-                    tabInfo.addEventListener('click', function() {
-                        const url = this.getAttribute('data-url');
-                        chrome.tabs.create({ url: url });
-                    });
-                    
-                    // Add cursor pointer style to tab info
-                    tabInfo.style.cursor = 'pointer';
-                    
-                    // Add lock toggle functionality
-                    const lockIcon = tabElement.querySelector('.lock-icon');
-                    lockIcon.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        toggleLock(tab.id);
-                    });
-                    
-                    // Add edit icon functionality
-                    const editIcon = tabElement.querySelector('.edit-icon');
-                    editIcon.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        editTab(tab.id);
-                    });
-
-                    const deleteIcon = tabElement.querySelector('.delete-icon');
-                    if (deleteIcon) {
-                        deleteIcon.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            deleteTab(tab.id);
-                        });
-                    }
-
-                    // Add copy icon functionality
-                    const copyIcon = tabElement.querySelector('.copy-icon');
-                    copyIcon.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        copySingleTab(tab.title, tab.url);
-                    });
-
-                    // Add folder select functionality
-                    const folderSelect = tabElement.querySelector('.folder-select');
-                    populateFolderSelect(folderSelect, tab.folderId);
-                    folderSelect.addEventListener('change', function(e) {
-                        e.stopPropagation();
-                        moveTabToFolder(tab.id, this.value === 'null' ? null : this.value);
-                    });
-
-                    // Add drag and drop functionality
-                    tabElement.addEventListener('dragstart', handleDragStart);
-                    tabElement.addEventListener('dragover', handleDragOver);
-                    tabElement.addEventListener('drop', handleDrop);
-                    tabElement.addEventListener('dragend', handleDragEnd);
-                    tabElement.addEventListener('dragleave', handleDragLeave);
-
-                    tabList.appendChild(tabElement);
-                });
-                
-                updateFolderCounts();
-            });
+        document.getElementById('open-options').addEventListener('click', function() {
+            chrome.runtime.openOptionsPage();
         });
+        updateFolderCounts();
+        return;
+    }
+
+    // Get all tab data using the dataKeys
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
+
+    // Filter tabs by current folder
+    if (currentFolderId !== null) {
+        allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
+    } else {
+        allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
+    }
+
+    // Sort tabs by order (if exists) or timestamp
+    allTabs.sort((a, b) => {
+        const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
+        const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
+        return orderA - orderB;
     });
+
+    if (allTabs.length === 0) {
+        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
+        updateFolderCounts();
+        return;
+    }
+                
+    allTabs.forEach((tab, index) => {
+        // Ensure locked property exists for backward compatibility
+        if (tab.locked === undefined) {
+            tab.locked = false;
+        }
+
+        // Ensure order property exists for drag and drop
+        if (tab.order === undefined) {
+            tab.order = index;
+        }
+
+        const tabElement = document.createElement('div');
+        tabElement.className = 'tab-item';
+        tabElement.setAttribute('draggable', 'true');
+        tabElement.setAttribute('data-tab-id', String(tab.id));
+
+        // Format the date
+        const date = new Date(tab.timestamp);
+        const formattedDate = date.toLocaleString();
+
+        const uncategorizedName = i18n.getString('uncategorized') || 'Uncategorized';
+
+        // Build tab element using DOM API for XSS safety
+        const tabInfo = document.createElement('div');
+        tabInfo.className = 'tab-info';
+        tabInfo.setAttribute('data-url', tab.url);
+        tabInfo.style.cursor = 'pointer';
+
+        const tabTitleEl = document.createElement('div');
+        tabTitleEl.className = 'tab-title';
+        tabTitleEl.textContent = tab.title;
+
+        const tabUrlEl = document.createElement('div');
+        tabUrlEl.className = 'tab-url';
+        tabUrlEl.textContent = tab.url;
+
+        const timestampEl = document.createElement('div');
+        timestampEl.className = 'timestamp';
+        timestampEl.textContent = formattedDate;
+
+        tabInfo.appendChild(tabTitleEl);
+        tabInfo.appendChild(tabUrlEl);
+        tabInfo.appendChild(timestampEl);
+
+        const tabControls = document.createElement('div');
+        tabControls.className = 'tab-controls';
+
+        const folderSelect = document.createElement('select');
+        folderSelect.className = 'folder-select';
+        folderSelect.setAttribute('data-id', String(tab.id));
+        const defaultOption = document.createElement('option');
+        defaultOption.value = 'null';
+        defaultOption.textContent = uncategorizedName;
+        folderSelect.appendChild(defaultOption);
+
+        const copyIcon = document.createElement('img');
+        copyIcon.className = 'copy-icon';
+        copyIcon.src = 'images/copy.svg';
+        copyIcon.alt = 'Copy';
+        copyIcon.title = i18n.getString('copyButton');
+        copyIcon.setAttribute('data-id', String(tab.id));
+
+        const lockIcon = document.createElement('img');
+        lockIcon.className = 'lock-icon' + (tab.locked ? ' locked' : '');
+        lockIcon.src = 'images/' + (tab.locked ? 'lock' : 'unlock') + '.svg';
+        lockIcon.alt = tab.locked ? 'Locked' : 'Unlocked';
+        lockIcon.setAttribute('data-id', String(tab.id));
+
+        const editIcon = document.createElement('img');
+        editIcon.className = 'edit-icon';
+        editIcon.src = 'images/edit.svg';
+        editIcon.alt = 'Edit';
+        editIcon.title = i18n.getString('editTab');
+        editIcon.setAttribute('data-id', String(tab.id));
+
+        const deleteIcon = document.createElement('img');
+        deleteIcon.className = 'delete-icon';
+        deleteIcon.src = 'images/delete.svg';
+        deleteIcon.alt = 'Delete';
+        deleteIcon.title = i18n.getString('deleteButton');
+        deleteIcon.setAttribute('data-id', String(tab.id));
+        if (tab.locked) deleteIcon.style.display = 'none';
+
+        tabControls.appendChild(folderSelect);
+        tabControls.appendChild(copyIcon);
+        tabControls.appendChild(lockIcon);
+        tabControls.appendChild(editIcon);
+        tabControls.appendChild(deleteIcon);
+
+        tabElement.appendChild(tabInfo);
+        tabElement.appendChild(tabControls);
+
+        // Add click event to open the tab
+        tabInfo.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            chrome.tabs.create({ url: url });
+        });
+
+        // Add lock toggle functionality
+        lockIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleLock(tab.id);
+        });
+
+        // Add edit icon functionality
+        editIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            editTab(tab.id);
+        });
+
+        deleteIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            deleteTab(tab.id);
+        });
+
+        // Add copy icon functionality
+        copyIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            copySingleTab(tab.title, tab.url);
+        });
+
+        // Add folder select functionality
+        populateFolderSelect(folderSelect, tab.folderId);
+        folderSelect.addEventListener('change', function(e) {
+            e.stopPropagation();
+            moveTabToFolder(tab.id, this.value === 'null' ? null : this.value);
+        });
+
+        // Add drag and drop functionality
+        tabElement.addEventListener('dragstart', handleDragStart);
+        tabElement.addEventListener('dragover', handleDragOver);
+        tabElement.addEventListener('drop', handleDrop);
+        tabElement.addEventListener('dragend', handleDragEnd);
+        tabElement.addEventListener('dragleave', handleDragLeave);
+
+        tabList.appendChild(tabElement);
+    });
+
+    updateFolderCounts();
 }
 
-function deleteTab(tabId) {
+async function deleteTab(tabId) {
     // Find and remove the tab element from DOM first
     const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
-    
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        
-        // Find which key contains the tab with the given ID
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            // Find the key that contains the tab with the given ID
-            const keyToRemove = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
-            
-            if (!keyToRemove) {
-                return;
-            }
-            
-            // Create updated dataKeys array without the removed key
-            const updatedDataKeys = dataKeys.filter(key => key !== keyToRemove);
-            
-            // Create a storage update object
-            const updateData = { dataKeys: updatedDataKeys };
-            
-            // Remove the tab data
-            chrome.storage.sync.remove([keyToRemove], function() {
-                // Update the dataKeys array
-                chrome.storage.sync.set(updateData, function() {
-                    // Remove the tab element from DOM instead of reloading
-                    if (tabElement) {
-                        tabElement.remove();
-                    }
-                    
-                    // Update folder counts without full reload
-                    updateFolderCounts();
-                    
-                    // Check if tab list is empty and show no tabs message
-                    const tabList = document.getElementById('tab-list');
-                    if (tabList.children.length === 0) {
-                        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
-                    }
-                });
-            });
-        });
-    });
+
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    // Find which key contains the tab with the given ID
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const keyToRemove = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
+
+    if (!keyToRemove) {
+        return;
+    }
+
+    // Create updated dataKeys array without the removed key
+    const updatedDataKeys = dataKeys.filter(key => key !== keyToRemove);
+
+    // Remove the tab data and update the dataKeys array
+    await chrome.storage.sync.remove([keyToRemove]);
+    await chrome.storage.sync.set({ dataKeys: updatedDataKeys });
+
+    // Remove the tab element from DOM instead of reloading
+    if (tabElement) {
+        tabElement.remove();
+    }
+
+    // Update folder counts without full reload
+    updateFolderCounts();
+
+    // Check if tab list is empty and show no tabs message
+    const tabList = document.getElementById('tab-list');
+    if (tabList.children.length === 0) {
+        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
+    }
 }
 
 // Populate folder select dropdown (with tree hierarchy)
-function populateFolderSelect(selectElement, currentFolderId) {
-    chrome.storage.sync.get(['folders', 'uncategorizedName'], function(result) {
-        const folders = result.folders || [];
-        const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
+async function populateFolderSelect(selectElement, currentFolderId) {
+    const result = await chrome.storage.sync.get(['folders', 'uncategorizedName']);
+    const folders = result.folders || [];
+    const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
 
-        // Clear existing options except the first one (未分類)
-        selectElement.innerHTML = `<option value="null">${uncategorizedName}</option>`;
+    // Clear existing options except the first one (未分類)
+    selectElement.innerHTML = `<option value="null">${uncategorizedName}</option>`;
 
-        // Build tree and add options with indentation
-        const tree = buildFolderTree(folders);
-        addFolderOptionsToSelectRecursive(selectElement, tree, 0);
+    // Build tree and add options with indentation
+    const tree = buildFolderTree(folders);
+    addFolderOptionsToSelectRecursive(selectElement, tree, 0);
 
-        // Set current value
-        selectElement.value = currentFolderId || 'null';
-    });
+    // Set current value
+    selectElement.value = currentFolderId || 'null';
 }
 
 // Add folder options to select element recursively with indentation
@@ -1313,48 +1330,46 @@ function addFolderOptionsToSelectRecursive(selectElement, tree, level) {
 }
 
 // Move tab to folder
-function moveTabToFolder(tabId, folderId) {
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
-            
-            if (!keyToUpdate) {
-                return;
-            }
-            
-            const tab = tabsData[keyToUpdate];
-            const oldFolderId = tab.folderId;
-            tab.folderId = folderId;
-            
-            chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
-                // Update folder counts
-                updateFolderCounts();
-                
-                // If the tab is moved out of the current folder, remove it from the view
-                const shouldRemoveFromView = (
-                    (currentFolderId === oldFolderId && currentFolderId !== folderId) ||
-                    (currentFolderId === null && oldFolderId === null && folderId !== null) ||
-                    (currentFolderId !== null && oldFolderId === null && currentFolderId !== folderId)
-                );
-                
-                if (shouldRemoveFromView) {
-                    // Find and remove the tab element from DOM
-                    const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
-                    if (tabElement) {
-                        tabElement.remove();
-                    }
-                    
-                    // Check if tab list is empty and show no tabs message
-                    const tabList = document.getElementById('tab-list');
-                    if (tabList.children.length === 0) {
-                        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
-                    }
-                }
-            });
-        });
-    });
+async function moveTabToFolder(tabId, folderId) {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const keyToUpdate = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
+
+    if (!keyToUpdate) {
+        return;
+    }
+
+    const tab = tabsData[keyToUpdate];
+    const oldFolderId = tab.folderId;
+    tab.folderId = folderId;
+
+    await chrome.storage.sync.set({ [keyToUpdate]: tab });
+
+    // Update folder counts
+    updateFolderCounts();
+
+    // If the tab is moved out of the current folder, remove it from the view
+    const shouldRemoveFromView = (
+        (currentFolderId === oldFolderId && currentFolderId !== folderId) ||
+        (currentFolderId === null && oldFolderId === null && folderId !== null) ||
+        (currentFolderId !== null && oldFolderId === null && currentFolderId !== folderId)
+    );
+
+    if (shouldRemoveFromView) {
+        // Find and remove the tab element from DOM
+        const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
+        if (tabElement) {
+            tabElement.remove();
+        }
+
+        // Check if tab list is empty and show no tabs message
+        const tabList = document.getElementById('tab-list');
+        if (tabList.children.length === 0) {
+            tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
+        }
+    }
 }
 
 // Update uncategorized name in UI
@@ -1372,155 +1387,152 @@ function updateUncategorizedNameInUI(newName) {
 }
 
 // Load uncategorized name from storage
-function loadUncategorizedName() {
-    chrome.storage.sync.get(['uncategorizedName'], function(result) {
-        const customName = result.uncategorizedName;
-        if (customName) {
-            document.getElementById('uncategorized-name').textContent = customName;
-            updateUncategorizedNameInUI(customName);
-        } else {
-            const defaultName = i18n.getString('uncategorized');
-            document.getElementById('uncategorized-name').textContent = defaultName;
-            updateUncategorizedNameInUI(defaultName);
-        }
-    });
+async function loadUncategorizedName() {
+    const result = await chrome.storage.sync.get(['uncategorizedName']);
+    const customName = result.uncategorizedName;
+    if (customName) {
+        document.getElementById('uncategorized-name').textContent = customName;
+        updateUncategorizedNameInUI(customName);
+    } else {
+        const defaultName = i18n.getString('uncategorized');
+        document.getElementById('uncategorized-name').textContent = defaultName;
+        updateUncategorizedNameInUI(defaultName);
+    }
 }
 
-function toggleLock(tabId) {
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
+async function toggleLock(tabId) {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-        // Find which key contains the tab with the given ID
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
+    // Find which key contains the tab with the given ID
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const keyToUpdate = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
 
-            if (!keyToUpdate) {
-                return;
-            }
+    if (!keyToUpdate) {
+        return;
+    }
 
-            // Toggle the locked state
-            const tab = tabsData[keyToUpdate];
-            tab.locked = !tab.locked;
+    // Toggle the locked state
+    const tab = tabsData[keyToUpdate];
+    tab.locked = !tab.locked;
 
-            // Update the storage and save the locked state properly
-            chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
-                if (chrome.runtime.lastError) {
-                    console.error("Error saving lock state:", chrome.runtime.lastError);
-                    return;
-                }
-                loadAllMarkedTabs();
-            });
-        });
-    });
+    // Update the storage and save the locked state properly
+    await chrome.storage.sync.set({ [keyToUpdate]: tab });
+
+    // Partial DOM update instead of full reload
+    const tabElement = document.querySelector(`[data-tab-id="${String(tabId)}"]`);
+    if (tabElement) {
+        const lockIcon = tabElement.querySelector('.lock-icon');
+        const deleteIcon = tabElement.querySelector('.delete-icon');
+        if (lockIcon) {
+            lockIcon.src = 'images/' + (tab.locked ? 'lock' : 'unlock') + '.svg';
+            lockIcon.alt = tab.locked ? 'Locked' : 'Unlocked';
+            lockIcon.className = 'lock-icon' + (tab.locked ? ' locked' : '');
+        }
+        if (deleteIcon) {
+            deleteIcon.style.display = tab.locked ? 'none' : '';
+        }
+    }
 }
 
 // Get currently displayed tabs
-function getCurrentlyDisplayedTabs() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
+async function getCurrentlyDisplayedTabs() {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-            if (dataKeys.length === 0) {
-                resolve([]);
-                return;
-            }
+    if (dataKeys.length === 0) {
+        return [];
+    }
 
-            // Get all tab data using the dataKeys
-            chrome.storage.sync.get(dataKeys, function(tabsData) {
-                let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
+    // Get all tab data using the dataKeys
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
 
-                // Filter tabs by current folder
-                if (currentFolderId !== null) {
-                    allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
-                } else {
-                    allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
-                }
+    // Filter tabs by current folder
+    if (currentFolderId !== null) {
+        allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
+    } else {
+        allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
+    }
 
-                // Sort tabs by timestamp (newest first)
-                allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Sort tabs by timestamp (newest first)
+    allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                resolve(allTabs);
-            });
-        });
-    });
+    return allTabs;
 }
 
 // Copy URLs only
-function copyURLsOnly() {
-    getCurrentlyDisplayedTabs().then(tabs => {
-        if (tabs.length === 0) {
-            return;
-        }
+async function copyURLsOnly() {
+    const tabs = await getCurrentlyDisplayedTabs();
+    if (tabs.length === 0) {
+        return;
+    }
 
-        const urls = tabs.map(tab => tab.url).join('\n');
-        const textarea = document.getElementById('copy-textarea');
-        textarea.value = urls;
-        textarea.select();
-        document.execCommand('copy');
+    const urls = tabs.map(tab => tab.url).join('\n');
+    const textarea = document.getElementById('copy-textarea');
+    textarea.value = urls;
+    textarea.select();
+    document.execCommand('copy');
 
-        // Show feedback
-        const btn = document.getElementById('copy-urls-btn');
-        const originalText = btn.textContent;
-        btn.textContent = i18n.getString('copied') || 'Copied!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
-    });
+    // Show feedback
+    const btn = document.getElementById('copy-urls-btn');
+    const originalText = btn.textContent;
+    btn.textContent = i18n.getString('copied') || 'Copied!';
+    setTimeout(() => {
+        btn.textContent = originalText;
+    }, 2000);
 }
 
 // Copy titles and URLs
-function copyTitlesAndURLs() {
-    getCurrentlyDisplayedTabs().then(tabs => {
-        if (tabs.length === 0) {
-            return;
-        }
+async function copyTitlesAndURLs() {
+    const tabs = await getCurrentlyDisplayedTabs();
+    if (tabs.length === 0) {
+        return;
+    }
 
-        const content = tabs.map(tab => `${tab.title}\n${tab.url}`).join('\n\n');
-        const textarea = document.getElementById('copy-textarea');
-        textarea.value = content;
-        textarea.select();
-        document.execCommand('copy');
+    const content = tabs.map(tab => `${tab.title}\n${tab.url}`).join('\n\n');
+    const textarea = document.getElementById('copy-textarea');
+    textarea.value = content;
+    textarea.select();
+    document.execCommand('copy');
 
-        // Show feedback
-        const btn = document.getElementById('copy-titles-urls-btn');
-        const originalText = btn.textContent;
-        btn.textContent = i18n.getString('copied') || 'Copied!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
-    });
+    // Show feedback
+    const btn = document.getElementById('copy-titles-urls-btn');
+    const originalText = btn.textContent;
+    btn.textContent = i18n.getString('copied') || 'Copied!';
+    setTimeout(() => {
+        btn.textContent = originalText;
+    }, 2000);
 }
 
 // Edit tab
-function editTab(tabId) {
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
+async function editTab(tabId) {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            const keyToEdit = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const keyToEdit = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
 
-            if (!keyToEdit) {
-                return;
-            }
+    if (!keyToEdit) {
+        return;
+    }
 
-            const tab = tabsData[keyToEdit];
-            currentEditTabId = tabId;
+    const tab = tabsData[keyToEdit];
+    currentEditTabId = tabId;
 
-            // Populate the modal with current values
-            document.getElementById('edit-tab-title-input').value = tab.title;
-            document.getElementById('edit-tab-url-input').value = tab.url;
+    // Populate the modal with current values
+    document.getElementById('edit-tab-title-input').value = tab.title;
+    document.getElementById('edit-tab-url-input').value = tab.url;
 
-            // Show the modal
-            showModal('edit-tab-modal');
-            setTimeout(() => {
-                document.getElementById('edit-tab-title-input').focus();
-            }, 100);
-        });
-    });
+    // Show the modal
+    showModal('edit-tab-modal');
+    setTimeout(() => {
+        document.getElementById('edit-tab-title-input').focus();
+    }, 100);
 }
 
 // Confirm edit tab
-function confirmEditTab() {
+async function confirmEditTab() {
     if (!currentEditTabId) {
         return;
     }
@@ -1532,31 +1544,33 @@ function confirmEditTab() {
         return;
     }
 
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            const keyToUpdate = dataKeys.find(key => tabsData[key] && tabsData[key].id == currentEditTabId);
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const keyToUpdate = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(currentEditTabId));
 
-            if (!keyToUpdate) {
-                return;
-            }
+    if (!keyToUpdate) {
+        return;
+    }
 
-            const tab = tabsData[keyToUpdate];
-            tab.title = newTitle;
-            tab.url = newUrl;
+    const tab = tabsData[keyToUpdate];
+    tab.title = newTitle;
+    tab.url = newUrl;
 
-            chrome.storage.sync.set({ [keyToUpdate]: tab }, function() {
-                if (chrome.runtime.lastError) {
-                    console.error("Error saving tab:", chrome.runtime.lastError);
-                    return;
-                }
+    await chrome.storage.sync.set({ [keyToUpdate]: tab });
+    closeAllModals();
 
-                closeAllModals();
-                loadAllMarkedTabs();
-            });
-        });
-    });
+    // Partial DOM update instead of full reload
+    const tabElement = document.querySelector(`[data-tab-id="${String(currentEditTabId)}"]`);
+    if (tabElement) {
+        const titleEl = tabElement.querySelector('.tab-title');
+        const urlEl = tabElement.querySelector('.tab-url');
+        const tabInfo = tabElement.querySelector('.tab-info');
+        if (titleEl) titleEl.textContent = newTitle;
+        if (urlEl) urlEl.textContent = newUrl;
+        if (tabInfo) tabInfo.setAttribute('data-url', newUrl);
+    }
 }
 
 // Show toast notification
@@ -1594,6 +1608,7 @@ function handleDragStart(e) {
     this.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', this.innerHTML);
+    e.dataTransfer.setData('application/tab-id', this.getAttribute('data-tab-id'));
 }
 
 function handleDragOver(e) {
@@ -1640,70 +1655,79 @@ function handleDragEnd(e) {
         item.classList.remove('drag-over');
     });
 
+    // Remove tab-drop-target from folder items
+    document.querySelectorAll('.folder-item').forEach(item => {
+        item.classList.remove('tab-drop-target');
+    });
+
     draggedElement = null;
 }
 
 // Reorder tabs in storage
-function reorderTabs(draggedId, targetId) {
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
+async function reorderTabs(draggedId, targetId) {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            // Get all tabs for the current folder
-            let allTabs = dataKeys.map(key => ({ key, ...tabsData[key] })).filter(tab => tab.id);
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    // Get all tabs for the current folder
+    let allTabs = dataKeys.map(key => ({ key, ...tabsData[key] })).filter(tab => tab.id);
 
-            // Filter tabs by current folder
-            if (currentFolderId !== null) {
-                allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
-            } else {
-                allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
-            }
+    // Filter tabs by current folder
+    if (currentFolderId !== null) {
+        allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
+    } else {
+        allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
+    }
 
-            // Sort by current order or timestamp
-            allTabs.sort((a, b) => {
-                const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
-                const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
-                return orderA - orderB;
-            });
-
-            // Find the positions of dragged and target tabs
-            const draggedIndex = allTabs.findIndex(tab => tab.id == draggedId);
-            const targetIndex = allTabs.findIndex(tab => tab.id == targetId);
-
-            if (draggedIndex === -1 || targetIndex === -1) {
-                return;
-            }
-
-            // Move the dragged tab to the target position
-            const [draggedTab] = allTabs.splice(draggedIndex, 1);
-            allTabs.splice(targetIndex, 0, draggedTab);
-
-            // Update order for all tabs in the current folder
-            const updateData = {};
-            allTabs.forEach((tab, index) => {
-                tab.order = index;
-                updateData[tab.key] = {
-                    id: tab.id,
-                    title: tab.title,
-                    url: tab.url,
-                    timestamp: tab.timestamp,
-                    locked: tab.locked,
-                    folderId: tab.folderId,
-                    order: tab.order,
-                    html: tab.html
-                };
-            });
-
-            // Save the updated order
-            chrome.storage.sync.set(updateData, function() {
-                if (chrome.runtime.lastError) {
-                    console.error("Error saving tab order:", chrome.runtime.lastError);
-                    return;
-                }
-
-                // Reload tabs to show the new order
-                loadAllMarkedTabs();
-            });
-        });
+    // Sort by current order or timestamp
+    allTabs.sort((a, b) => {
+        const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
+        const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
+        return orderA - orderB;
     });
+
+    // Find the positions of dragged and target tabs
+    const draggedIndex = allTabs.findIndex(tab => String(tab.id) === String(draggedId));
+    const targetIndex = allTabs.findIndex(tab => String(tab.id) === String(targetId));
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+        return;
+    }
+
+    // Move the dragged tab to the target position
+    const [draggedTab] = allTabs.splice(draggedIndex, 1);
+    allTabs.splice(targetIndex, 0, draggedTab);
+
+    // Update order for all tabs in the current folder
+    const updateData = {};
+    allTabs.forEach((tab, index) => {
+        tab.order = index;
+        updateData[tab.key] = {
+            id: tab.id,
+            title: tab.title,
+            url: tab.url,
+            timestamp: tab.timestamp,
+            locked: tab.locked,
+            folderId: tab.folderId,
+            order: tab.order,
+            html: tab.html
+        };
+    });
+
+    // Save the updated order
+    await chrome.storage.sync.set(updateData);
+
+    // DOM move instead of full reload
+    const tabList = document.getElementById('tab-list');
+    const draggedEl = tabList.querySelector(`[data-tab-id="${String(draggedId)}"]`);
+    const targetEl = tabList.querySelector(`[data-tab-id="${String(targetId)}"]`);
+    if (draggedEl && targetEl) {
+        if (draggedIndex < targetIndex) {
+            // Moving down: insert after target
+            targetEl.parentNode.insertBefore(draggedEl, targetEl.nextSibling);
+        } else {
+            // Moving up: insert before target
+            targetEl.parentNode.insertBefore(draggedEl, targetEl);
+        }
+    }
 }

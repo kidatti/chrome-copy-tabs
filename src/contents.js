@@ -1,15 +1,3 @@
-// Remove window.onload as it's redundant with DOMContentLoaded
-// window.onload = function() {
-//     // Load language setting
-//     chrome.storage.sync.get(['language'], function(result) {
-//         if (result.language) {
-//             i18n.setLanguage(result.language);
-//         } else {
-//             i18n.setLanguage('auto');
-//         }
-//     });
-// };
-
 // Function to update UI elements with current language
 function updateUI() {
     // Update section titles
@@ -29,7 +17,7 @@ function updateUI() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", async function(){
     // Show development badge if loaded from local files (not from Chrome Web Store)
     const manifestData = chrome.runtime.getManifest();
     // Chrome Web Store extensions have 'update_url', local extensions don't
@@ -42,68 +30,66 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     // Load language setting first
-    chrome.storage.sync.get(['language'], function(result) {
-        console.log('Contents.js language setting:', result.language);
-        if (result.language) {
-            i18n.setLanguage(result.language);
-        } else {
-            console.log('No language setting found, defaulting to English');
-            i18n.setLanguage('en');
-        }
+    const langResult = await chrome.storage.sync.get(['language']);
+    console.log('Contents.js language setting:', langResult.language);
+    if (langResult.language) {
+        i18n.setLanguage(langResult.language);
+    } else {
+        console.log('No language setting found, defaulting to English');
+        i18n.setLanguage('en');
+    }
 
-        // Update UI with current language
-        updateUI();
-        
-        // Then set up event listeners and update UI
-        document.getElementById('copyCurrentTab').addEventListener('click', getActiveTab);
-        document.getElementById('copyAllTabs').addEventListener('click', getAllTabs);
-        document.getElementById('markCurrentTab').addEventListener('click', markCurrentTab);
-        document.getElementById('markAllTabs').addEventListener('click', markAllTabs);
-        document.getElementById('viewAllTabsIcon').addEventListener('click', openAllTabsWindow);
-        document.getElementById('exportHtmlCurrentTab').addEventListener('click', exportHtmlCurrentTab);
-        document.getElementById('exportHtmlArticleCurrentTab').addEventListener('click', exportHtmlArticleCurrentTab);
-        document.getElementById('exportMarkdownCurrentTab').addEventListener('click', exportMarkdownCurrentTab);
-        
-        // Get current tab info
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (tabs[0]) {
-                document.getElementById('title').innerHTML = tabs[0].title;
-                document.getElementById('url').innerHTML = tabs[0].url;
+    // Update UI with current language
+    updateUI();
 
-                // Update current tab info display
-                document.getElementById('current-tab-title').textContent = tabs[0].title;
-                document.getElementById('current-tab-url').textContent = tabs[0].url;
-            }
-        });
-        
-        // Button texts are now updated in updateUI() function
-        
-        count();
-        loadMarkedTabs();
-        
-        // Update view all button
-        updateViewAllButton();
-        
-        // Initialize settings icon
-        initializeSettingsIcon();
-        
-        // Initialize folder UI texts
-        initializeFolderUI();
-        
-        // Load folders for popup
-        loadFoldersForPopup();
-        loadDefaultFolder();
-        
-        // Add folder select event listener to save last selected folder
-        document.getElementById('folder-select').addEventListener('change', saveLastSelectedFolder);
-    });
+    // Then set up event listeners and update UI
+    document.getElementById('copyCurrentTab').addEventListener('click', getActiveTab);
+    document.getElementById('copyAllTabs').addEventListener('click', getAllTabs);
+    document.getElementById('markCurrentTab').addEventListener('click', markCurrentTab);
+    document.getElementById('markAllTabs').addEventListener('click', markAllTabs);
+    document.getElementById('viewAllTabsIcon').addEventListener('click', openAllTabsWindow);
+    document.getElementById('exportHtmlCurrentTab').addEventListener('click', exportHtmlCurrentTab);
+    document.getElementById('exportHtmlArticleCurrentTab').addEventListener('click', exportHtmlArticleCurrentTab);
+    document.getElementById('exportMarkdownCurrentTab').addEventListener('click', exportMarkdownCurrentTab);
+
+    // Get current tab info
+    const activeTabs = await chrome.tabs.query({active: true, currentWindow: true});
+    if (activeTabs[0]) {
+        document.getElementById('title').textContent = activeTabs[0].title;
+        document.getElementById('url').textContent = activeTabs[0].url;
+
+        // Update current tab info display
+        document.getElementById('current-tab-title').textContent = activeTabs[0].title;
+        document.getElementById('current-tab-url').textContent = activeTabs[0].url;
+    }
+
+    // Button texts are now updated in updateUI() function
+
+    count();
+    loadMarkedTabs();
+
+    // Update view all button
+    updateViewAllButton();
+
+    // Initialize settings icon
+    initializeSettingsIcon();
+
+    // Initialize folder UI texts
+    initializeFolderUI();
+
+    // Load folders for popup
+    loadFoldersForPopup();
+    loadDefaultFolder();
+
+    // Add folder select event listener to save last selected folder
+    document.getElementById('folder-select').addEventListener('change', saveLastSelectedFolder);
 });
 
 // Listen for storage changes to update language and folders
 chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'sync' && changes.language) {
         console.log('Popup: Language setting changed to:', changes.language.newValue);
-        
+
         // Set the new language
         if (changes.language.newValue) {
             if (changes.language.newValue !== 'auto') {
@@ -114,68 +100,63 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         } else {
             i18n.setLanguage('en');
         }
-        
+
         // Update UI with new language
         updateUI();
         // Reload other UI elements
         initializeFolderUI();
         loadFoldersForPopup();
         loadDefaultFolder();
-        
+
         // Update settings icon tooltip
         const settingsIcon = document.getElementById('settingsIcon');
         if (settingsIcon) {
             settingsIcon.title = i18n.getString('settingsLink') || 'Settings';
         }
-        
+
         // Reload marked tabs to update any displayed text
         loadMarkedTabs();
     }
-    
+
     // Listen for folder changes and update folder select
     if (namespace === 'sync' && changes.folders) {
         loadFoldersForPopup();
     }
 });
 
-function count() {
-    chrome.tabs.query({}, function(tabs) {
-        const total = tabs.length;
-        document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs') + " (" + total + ")";
-        document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + total + ")";
-    });
+async function count() {
+    const tabs = await chrome.tabs.query({});
+    const total = tabs.length;
+    document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs') + " (" + total + ")";
+    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + total + ")";
 }
 
-function getActiveTab() {
-    return new Promise((resolve) => {
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (tabs[0]) {
-                let text = tabs[0].title + "\n" + tabs[0].url;
-                document.getElementById('input').value = text;
-                copy();
-                document.getElementById('copyCurrentTab').textContent = i18n.getString('copied');
-                setTimeout(() => {
-                    document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
-                }, 2000);
-            }
-            resolve(tabs);
-        });
-    });
-}
-
-function getAllTabs() {
-    chrome.tabs.query({}, function(tabs) {
-        let text = "";
-        tabs.forEach(tab => {
-            text += tab.title + "\n" + tab.url + "\n";
-        });
+async function getActiveTab() {
+    const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+    if (tabs[0]) {
+        let text = tabs[0].title + "\n" + tabs[0].url;
         document.getElementById('input').value = text;
         copy();
-        document.getElementById('copyAllTabs').textContent = i18n.getString('copied');
+        document.getElementById('copyCurrentTab').textContent = i18n.getString('copied');
         setTimeout(() => {
-            document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs') + " (" + tabs.length + ")";
+            document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
         }, 2000);
+    }
+    return tabs;
+}
+
+async function getAllTabs() {
+    const tabs = await chrome.tabs.query({});
+    let text = "";
+    tabs.forEach(tab => {
+        text += tab.title + "\n" + tab.url + "\n";
     });
+    document.getElementById('input').value = text;
+    copy();
+    document.getElementById('copyAllTabs').textContent = i18n.getString('copied');
+    setTimeout(() => {
+        document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs') + " (" + tabs.length + ")";
+    }, 2000);
 }
 
 function copy() {
@@ -184,52 +165,46 @@ function copy() {
     document.execCommand("copy");
 }
 
-function markCurrentTab() {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        if (tabs.length === 0) {
-            document.getElementById('markCurrentTab').textContent = i18n.getString('noTabs');
+async function markCurrentTab() {
+    const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+    if (tabs.length === 0) {
+        document.getElementById('markCurrentTab').textContent = i18n.getString('noTabs');
+        setTimeout(() => {
+            document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+        }, 2000);
+        return;
+    }
+
+    const currentUrl = tabs[0].url;
+
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    if (dataKeys.length > 0) {
+        const tabsData = await chrome.storage.sync.get(dataKeys);
+        const allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab !== null && tab !== undefined);
+
+        // Check if the URL is already in marked tabs
+        const isDuplicate = allTabs.some(tab => tab && tab.url === currentUrl);
+
+        if (isDuplicate) {
+            document.getElementById('markCurrentTab').textContent = i18n.getString('alreadyMarked');
             setTimeout(() => {
                 document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
             }, 2000);
             return;
         }
+    }
 
-        const currentUrl = tabs[0].url;
-
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
-
-            if (dataKeys.length > 0) {
-                // Get all tab data using the dataKeys
-                chrome.storage.sync.get(dataKeys, function(tabsData) {
-                    const allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab != null);
-
-                    // Check if the URL is already in marked tabs
-                    const isDuplicate = allTabs.some(tab => tab && tab.url === currentUrl);
-
-                    if (isDuplicate) {
-                        document.getElementById('markCurrentTab').textContent = i18n.getString('alreadyMarked');
-                        setTimeout(() => {
-                            document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
-                        }, 2000);
-                        return;
-                    }
-
-                    addNewTab(tabs[0]);
-                });
-            } else {
-                addNewTab(tabs[0]);
-            }
-        });
-    });
+    await addNewTab(tabs[0]);
 }
 
 // Helper function to add a new tab
-function addNewTab(chromeTab) {
+async function addNewTab(chromeTab) {
     // Get selected folder from popup
     const selectedFolderId = document.getElementById('folder-select').value;
     const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
-    
+
     const tab = {
         id: Date.now(),
         title: chromeTab.title,
@@ -238,240 +213,213 @@ function addNewTab(chromeTab) {
         locked: false,
         folderId: folderId
     };
-    
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        // Generate a unique key that doesn't already exist
-        let counter = dataKeys.length + 1;
-        let newKey = `mark-${counter}`;
-        while (dataKeys.includes(newKey)) {
-            counter++;
-            newKey = `mark-${counter}`;
-        }
-        const updatedKeys = [...dataKeys, newKey];
-        
-        // Create a storage update object
-        const updateData = {
-            dataKeys: updatedKeys,
-            [newKey]: tab
-        };
-        
-        chrome.storage.sync.set(updateData, function() {
-            // Immediately update the tab list
-            loadMarkedTabs();
 
-            document.getElementById('markCurrentTab').textContent = i18n.getString('marked');
-            setTimeout(() => {
-                document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
-            }, 2000);
-        });
-    });
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+    // Generate a unique key that doesn't already exist
+    let counter = dataKeys.length + 1;
+    let newKey = `mark-${counter}`;
+    while (dataKeys.includes(newKey)) {
+        counter++;
+        newKey = `mark-${counter}`;
+    }
+    const updatedKeys = [...dataKeys, newKey];
+
+    // Create a storage update object
+    const updateData = {
+        dataKeys: updatedKeys,
+        [newKey]: tab
+    };
+
+    await chrome.storage.sync.set(updateData);
+
+    // Immediately update the tab list
+    loadMarkedTabs();
+
+    document.getElementById('markCurrentTab').textContent = i18n.getString('marked');
+    setTimeout(() => {
+        document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+    }, 2000);
 }
 
 // Function to clean up duplicate dataKeys
-function cleanupDuplicateDataKeys() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
-            
-            if (dataKeys.length === 0) {
-                resolve();
-                return;
-            }
-            
-            // Remove duplicates from dataKeys
-            const uniqueDataKeys = [...new Set(dataKeys)];
-            
-            if (uniqueDataKeys.length !== dataKeys.length) {
-                console.log(`Found duplicate dataKeys. Cleaning up: ${dataKeys.length} -> ${uniqueDataKeys.length}`);
-                
-                chrome.storage.sync.set({ dataKeys: uniqueDataKeys }, function() {
-                    console.log("DataKeys cleaned up successfully");
-                    resolve();
-                });
-            } else {
-                resolve();
-            }
-        });
-    });
+async function cleanupDuplicateDataKeys() {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    if (dataKeys.length === 0) return;
+
+    // Remove duplicates from dataKeys
+    const uniqueDataKeys = [...new Set(dataKeys)];
+
+    if (uniqueDataKeys.length !== dataKeys.length) {
+        console.log(`Found duplicate dataKeys. Cleaning up: ${dataKeys.length} -> ${uniqueDataKeys.length}`);
+        await chrome.storage.sync.set({ dataKeys: uniqueDataKeys });
+        console.log("DataKeys cleaned up successfully");
+    }
 }
 
 // Function to migrate from old markedTabs format to new dataKeys format
-function migrateFromMarkedTabs() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['markedTabs'], function(result) {
-            if (!result.markedTabs) {
-                // No markedTabs data to migrate
-                resolve();
-                return;
-            }
+async function migrateFromMarkedTabs() {
+    const result = await chrome.storage.sync.get(['markedTabs']);
+    if (!result.markedTabs) return;
 
-            const markedTabs = result.markedTabs;
-            const dataKeys = [];
-            const storageData = {};
+    const markedTabs = result.markedTabs;
+    const dataKeys = [];
+    const storageData = {};
 
-            // Create new format data
-            markedTabs.forEach((tab, index) => {
-                const keyName = `mark-${index + 1}`;
-                dataKeys.push(keyName);
-                storageData[keyName] = tab;
-            });
-
-            // Add dataKeys to storage data
-            storageData.dataKeys = dataKeys;
-
-            // Save new format data
-            chrome.storage.sync.set(storageData, function() {
-                console.log("Migration completed: converted markedTabs to dataKeys format");
-                
-                // Remove old markedTabs data
-                chrome.storage.sync.remove(['markedTabs'], function() {
-                    console.log("Removed old markedTabs data");
-                    resolve();
-                });
-            });
-        });
+    // Create new format data
+    markedTabs.forEach((tab, index) => {
+        const keyName = `mark-${index + 1}`;
+        dataKeys.push(keyName);
+        storageData[keyName] = tab;
     });
+
+    // Add dataKeys to storage data
+    storageData.dataKeys = dataKeys;
+
+    // Save new format data
+    await chrome.storage.sync.set(storageData);
+    console.log("Migration completed: converted markedTabs to dataKeys format");
+
+    // Remove old markedTabs data
+    await chrome.storage.sync.remove(['markedTabs']);
+    console.log("Removed old markedTabs data");
 }
 
 // Modify existing loadMarkedTabs function to use new storage format
-function loadMarkedTabs() {
+async function loadMarkedTabs() {
     const tabList = document.getElementById('tab-list');
     tabList.innerHTML = '';
-    
+
     // Check for and migrate old format if needed, then cleanup duplicates
-    migrateFromMarkedTabs().then(() => {
-        return cleanupDuplicateDataKeys();
-    }).then(() => {
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
-            
-            if (dataKeys.length === 0) {
-                tabList.innerHTML = '<div class="no-tabs">' + i18n.getString('noMarkedTabs') + '</div>';
-                updateViewAllButton();
-                return;
-            }
-            
-            // Get all tab data using the dataKeys
-            chrome.storage.sync.get(dataKeys, function(tabsData) {
-                const allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab != null);
-                
-                // Sort tabs by timestamp (newest first)
-                allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                // Display only the latest 5 tabs in the popup
-                const tabsToShow = allTabs.slice(0, 5);
-                
-                tabsToShow.forEach(tab => {
-                    // Ensure locked property exists for backward compatibility
-                    if (tab.locked === undefined) {
-                        tab.locked = false;
-                    }
-                    
-                    const tabElement = document.createElement('div');
-                    tabElement.className = 'tab-item';
-                    tabElement.innerHTML = `
-                        <div class="tab-info" data-url="${tab.url}">
-                            <div class="tab-title">${tab.title}</div>
-                            <div class="tab-url">${tab.url}</div>
-                        </div>
-                        <button class="delete-btn" data-id="${tab.id}" ${tab.locked ? 'style="display: none;"' : ''}>${i18n.getString('deleteButton')}</button>
-                    `;
-                    
-                    // Add click event to open the tab
-                    const tabInfo = tabElement.querySelector('.tab-info');
-                    tabInfo.addEventListener('click', function() {
-                        const url = this.getAttribute('data-url');
-                        chrome.tabs.create({ url: url });
-                    });
-                    
-                    // Add cursor pointer style to tab info
-                    tabInfo.style.cursor = 'pointer';
-                    
-                    // Add click event to delete button
-                    const deleteBtn = tabElement.querySelector('.delete-btn');
-                    deleteBtn.addEventListener('click', function() {
-                        const tabId = this.getAttribute('data-id');
-                        deleteTab(tabId);
-                    });
-                    
-                    tabList.appendChild(tabElement);
-                });
-                
-                updateViewAllButton();
-            });
+    await migrateFromMarkedTabs();
+    await cleanupDuplicateDataKeys();
+
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    if (dataKeys.length === 0) {
+        tabList.innerHTML = '<div class="no-tabs">' + i18n.getString('noMarkedTabs') + '</div>';
+        updateViewAllButton();
+        return;
+    }
+
+    // Get all tab data using the dataKeys
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab !== null && tab !== undefined);
+
+    // Sort tabs by timestamp (newest first)
+    allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // Display only the latest 5 tabs in the popup
+    const tabsToShow = allTabs.slice(0, 5);
+
+    tabsToShow.forEach(tab => {
+        // Ensure locked property exists for backward compatibility
+        if (tab.locked === undefined) {
+            tab.locked = false;
+        }
+
+        const tabElement = document.createElement('div');
+        tabElement.className = 'tab-item';
+
+        const tabInfo = document.createElement('div');
+        tabInfo.className = 'tab-info';
+        tabInfo.setAttribute('data-url', tab.url);
+
+        const tabTitle = document.createElement('div');
+        tabTitle.className = 'tab-title';
+        tabTitle.textContent = tab.title;
+
+        const tabUrl = document.createElement('div');
+        tabUrl.className = 'tab-url';
+        tabUrl.textContent = tab.url;
+
+        tabInfo.appendChild(tabTitle);
+        tabInfo.appendChild(tabUrl);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.setAttribute('data-id', String(tab.id));
+        if (tab.locked) deleteBtn.style.display = 'none';
+        deleteBtn.textContent = i18n.getString('deleteButton');
+
+        tabElement.appendChild(tabInfo);
+        tabElement.appendChild(deleteBtn);
+
+        // Add click event to open the tab
+        tabInfo.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            chrome.tabs.create({ url: url });
         });
+
+        // Add cursor pointer style to tab info
+        tabInfo.style.cursor = 'pointer';
+
+        // Add click event to delete button
+        deleteBtn.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-id');
+            deleteTab(tabId);
+        });
+
+        tabList.appendChild(tabElement);
     });
+
+    updateViewAllButton();
 }
 
-function deleteTab(tabId) {
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        
-        // Find which key contains the tab with the given ID
-        chrome.storage.sync.get(dataKeys, function(tabsData) {
-            // Find the key that contains the tab with the given ID
-            const keyToRemove = dataKeys.find(key => tabsData[key] && tabsData[key].id == tabId);
-            
-            if (!keyToRemove) {
-                return;
-            }
-            
-            // Create updated dataKeys array without the removed key
-            const updatedDataKeys = dataKeys.filter(key => key !== keyToRemove);
-            
-            // Create a storage update object
-            const updateData = { dataKeys: updatedDataKeys };
-            
-            // Remove the tab data
-            chrome.storage.sync.remove([keyToRemove], function() {
-                // Update the dataKeys array
-                chrome.storage.sync.set(updateData, function() {
-                    loadMarkedTabs();
-                });
-            });
-        });
-    });
+async function deleteTab(tabId) {
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    const tabsData = await chrome.storage.sync.get(dataKeys);
+    const keyToRemove = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
+
+    if (!keyToRemove) return;
+
+    const updatedDataKeys = dataKeys.filter(key => key !== keyToRemove);
+
+    await chrome.storage.sync.remove([keyToRemove]);
+    await chrome.storage.sync.set({ dataKeys: updatedDataKeys });
+    loadMarkedTabs();
 }
 
-function updateViewAllButton() {
+async function updateViewAllButton() {
     const tabCountElement = document.getElementById('tabCount');
     const viewAllContainer = document.getElementById('viewAllTabsIcon');
-    
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        const count = dataKeys.length;
-        
-        if (tabCountElement) {
-            tabCountElement.textContent = count;
+
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+    const count = dataKeys.length;
+
+    if (tabCountElement) {
+        tabCountElement.textContent = count;
+    }
+
+    if (viewAllContainer) {
+        if (count > 0) {
+            viewAllContainer.title = `View All Tabs (${count})`;
+            viewAllContainer.style.opacity = '1';
+        } else {
+            viewAllContainer.title = 'View All Tabs';
+            viewAllContainer.style.opacity = '0.6';
         }
-        
-        if (viewAllContainer) {
-            if (count > 0) {
-                viewAllContainer.title = `View All Tabs (${count})`;
-                viewAllContainer.style.opacity = '1';
-            } else {
-                viewAllContainer.title = 'View All Tabs';
-                viewAllContainer.style.opacity = '0.6';
-            }
-        }
-    });
+    }
 }
 
 // Initialize settings icon
-function initializeSettingsIcon() {
+async function initializeSettingsIcon() {
     const settingsIcon = document.getElementById('settingsIcon');
     if (settingsIcon) {
-        // Set tooltip text
-        chrome.storage.sync.get(['language'], function(result) {
-            if (result.language) {
-                i18n.setLanguage(result.language);
-            } else {
-                i18n.setLanguage('auto');
-            }
-            settingsIcon.title = i18n.getString('settingsLink') || 'Settings';
-        });
-        
+        const result = await chrome.storage.sync.get(['language']);
+        if (result.language) {
+            i18n.setLanguage(result.language);
+        } else {
+            i18n.setLanguage('auto');
+        }
+        settingsIcon.title = i18n.getString('settingsLink') || 'Settings';
+
         // Add click event to open options page
         settingsIcon.addEventListener('click', function() {
             chrome.runtime.openOptionsPage();
@@ -479,59 +427,49 @@ function initializeSettingsIcon() {
     }
 }
 
-function openAllTabsWindow() {
-    // Check if all_tabs.html is already open
-    chrome.tabs.query({url: chrome.runtime.getURL('all_tabs.html')}, function(tabs) {
-        if (tabs.length > 0) {
-            // If tab exists, switch to it
-            chrome.tabs.update(tabs[0].id, {active: true});
-            chrome.windows.update(tabs[0].windowId, {focused: true});
-        } else {
-            // Create a new tab if it doesn't exist
-            chrome.tabs.create({
-                url: 'all_tabs.html'
-            });
-        }
-    });
+async function openAllTabsWindow() {
+    const tabs = await chrome.tabs.query({url: chrome.runtime.getURL('all_tabs.html')});
+    if (tabs.length > 0) {
+        await chrome.tabs.update(tabs[0].id, {active: true});
+        await chrome.windows.update(tabs[0].windowId, {focused: true});
+    } else {
+        await chrome.tabs.create({ url: 'all_tabs.html' });
+    }
 }
 
-function markAllTabs() {
-    chrome.tabs.query({}, function(tabs) {
-        if (tabs.length === 0) {
-            document.getElementById('markAllTabs').textContent = i18n.getString('noTabs');
-            setTimeout(() => {
-                document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
-            }, 2000);
-            return;
-        }
+async function markAllTabs() {
+    const tabs = await chrome.tabs.query({});
+    if (tabs.length === 0) {
+        document.getElementById('markAllTabs').textContent = i18n.getString('noTabs');
+        setTimeout(() => {
+            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+        }, 2000);
+        return;
+    }
 
-        chrome.storage.sync.get(['dataKeys'], function(result) {
-            const dataKeys = result.dataKeys || [];
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
 
-            // Get all existing tabs
-            if (dataKeys.length > 0) {
-                chrome.storage.sync.get(dataKeys, function(tabsData) {
-                    const existingTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab != null);
-                    processNewTabs(tabs, existingTabs);
-                });
-            } else {
-                processNewTabs(tabs, []);
-            }
-        });
-    });
+    let existingTabs = [];
+    if (dataKeys.length > 0) {
+        const tabsData = await chrome.storage.sync.get(dataKeys);
+        existingTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab !== null && tab !== undefined);
+    }
+
+    await processNewTabs(tabs, existingTabs);
 }
 
 // Helper function to process new tabs
-function processNewTabs(chromeTabs, existingTabs) {
+async function processNewTabs(chromeTabs, existingTabs) {
     // Get selected folder from popup
     const selectedFolderId = document.getElementById('folder-select').value;
     const folderId = selectedFolderId === 'null' ? null : selectedFolderId;
-    
+
     // Create a set of existing URLs for quick lookup
     const existingUrls = new Set(existingTabs.filter(tab => tab && tab.url).map(tab => tab.url));
-    
+
     let newTabs = [];
-    
+
     // Add all tabs to marked tabs, skipping duplicates
     chromeTabs.forEach(tab => {
         if (!existingUrls.has(tab.url)) {
@@ -547,95 +485,87 @@ function processNewTabs(chromeTabs, existingTabs) {
             existingUrls.add(tab.url);
         }
     });
-    
+
     const newTabsCount = newTabs.length;
 
     if (newTabsCount === 0) {
         document.getElementById('markAllTabs').textContent = i18n.getString('noNewTabs');
-        setTimeout(() => {
-            chrome.tabs.query({}, function(tabs) {
-                document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
-            });
+        setTimeout(async () => {
+            const tabs = await chrome.tabs.query({});
+            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
         }, 2000);
         return;
     }
-    
-    chrome.storage.sync.get(['dataKeys'], function(result) {
-        const dataKeys = result.dataKeys || [];
-        
-        // Create new keys and prepare update data
-        const updateData = {
-            dataKeys: [...dataKeys]
-        };
-        
-        newTabs.forEach((tab, index) => {
-            // Generate a unique key that doesn't already exist
-            let counter = dataKeys.length + index + 1;
-            let newKey = `mark-${counter}`;
-            while (updateData.dataKeys.includes(newKey)) {
-                counter++;
-                newKey = `mark-${counter}`;
-            }
-            updateData.dataKeys.push(newKey);
-            updateData[newKey] = tab;
-        });
-        
-        // Check if we're approaching the storage limit
-        const dataSize = JSON.stringify(updateData).length;
 
-        if (dataSize > 90000) { // Chrome sync storage limit is around 100KB
-            document.getElementById('markAllTabs').textContent = i18n.getString('quotaExceeded');
-            setTimeout(() => {
-                chrome.tabs.query({}, function(tabs) {
-                    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
-                });
-            }, 2000);
+    const result = await chrome.storage.sync.get(['dataKeys']);
+    const dataKeys = result.dataKeys || [];
+
+    // Create new keys and prepare update data
+    const updateData = {
+        dataKeys: [...dataKeys]
+    };
+
+    newTabs.forEach((tab, index) => {
+        // Generate a unique key that doesn't already exist
+        let counter = dataKeys.length + index + 1;
+        let newKey = `mark-${counter}`;
+        while (updateData.dataKeys.includes(newKey)) {
+            counter++;
+            newKey = `mark-${counter}`;
+        }
+        updateData.dataKeys.push(newKey);
+        updateData[newKey] = tab;
+    });
+
+    // Check if we're approaching the storage limit
+    const dataSize = JSON.stringify(updateData).length;
+
+    if (dataSize > 90000) { // Chrome sync storage limit is around 100KB
+        document.getElementById('markAllTabs').textContent = i18n.getString('quotaExceeded');
+        setTimeout(async () => {
+            const tabs = await chrome.tabs.query({});
+            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+        }, 2000);
+        return;
+    }
+
+    try {
+        await chrome.storage.sync.set(updateData);
+
+        if (chrome.runtime.lastError) {
+            console.error("Error saving to storage:", chrome.runtime.lastError);
+
+            let errorMessage = i18n.getString('error');
+            if (chrome.runtime.lastError.message.includes("QUOTA_BYTES_PER_ITEM")) {
+                errorMessage = i18n.getString('dataTooLarge');
+            } else if (chrome.runtime.lastError.message.includes("QUOTA_BYTES")) {
+                errorMessage = i18n.getString('quotaExceeded');
+            }
+
+            document.getElementById('markAllTabs').textContent = errorMessage;
+            setTimeout(async () => {
+                const tabs = await chrome.tabs.query({});
+                document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+            }, 3000);
             return;
         }
-        
-        // Use a callback to ensure the storage is updated
-        try {
-            chrome.storage.sync.set(updateData, function() {
-                if (chrome.runtime.lastError) {
-                    console.error("Error saving to storage:", chrome.runtime.lastError);
-                    
-                    // Display a user-friendly error message based on the error type
-                    let errorMessage = i18n.getString('error');
-                    if (chrome.runtime.lastError.message.includes("QUOTA_BYTES_PER_ITEM")) {
-                        errorMessage = i18n.getString('dataTooLarge');
-                    } else if (chrome.runtime.lastError.message.includes("QUOTA_BYTES")) {
-                        errorMessage = i18n.getString('quotaExceeded');
-                    }
 
-                    document.getElementById('markAllTabs').textContent = errorMessage;
-                    setTimeout(() => {
-                        chrome.tabs.query({}, function(tabs) {
-                            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
-                        });
-                    }, 3000);
-                    return;
-                }
+        // Immediately update the tab list
+        loadMarkedTabs();
 
-                // Immediately update the tab list
-                loadMarkedTabs();
-
-                document.getElementById('markAllTabs').textContent = newTabsCount + i18n.getString('markedTabs');
-                setTimeout(() => {
-                    chrome.tabs.query({}, function(tabs) {
-                        document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
-                    });
-                }, 2000);
-            });
-        } catch (error) {
-            console.error("Exception when saving to storage:", error);
-            document.getElementById('markAllTabs').textContent = i18n.getString('exception');
-            setTimeout(() => {
-                chrome.tabs.query({}, function(tabs) {
-                    document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
-                });
-            }, 2000);
-        }
-    });
+        document.getElementById('markAllTabs').textContent = newTabsCount + i18n.getString('markedTabs');
+        setTimeout(async () => {
+            const tabs = await chrome.tabs.query({});
+            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+        }, 2000);
+    } catch (error) {
+        console.error("Exception when saving to storage:", error);
+        document.getElementById('markAllTabs').textContent = i18n.getString('exception');
+        setTimeout(async () => {
+            const tabs = await chrome.tabs.query({});
+            document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs') + " (" + tabs.length + ")";
+        }, 2000);
+    }
 }
 
 function exportHtmlCurrentTab() {
@@ -647,7 +577,7 @@ function exportHtmlCurrentTab() {
         }
 
         console.log("Executing script in tab:", tabs[0].id);
-        
+
         // Execute the script directly
         chrome.scripting.executeScript({
             target: {tabId: tabs[0].id},
@@ -674,7 +604,7 @@ function exportHtmlCurrentTab() {
                     showMessage(i18n.getString('error'), 'error');
                     return;
                 }
-                
+
                 document.getElementById('input').value = result;
                 copy();
                 showMessage(i18n.getString('copied'), 'success');
@@ -737,7 +667,7 @@ function extractArticleContent() {
     try {
         console.log('Starting article extraction...');
         const documentClone = document.cloneNode(true);
-        
+
         // Check if Readability is available
         if (typeof Readability === 'undefined') {
             console.error('Readability is not defined');
@@ -746,7 +676,7 @@ function extractArticleContent() {
 
         console.log('Creating Readability instance...');
         const reader = new Readability(documentClone);
-        
+
         console.log('Parsing article...');
         const article = reader.parse();
 
@@ -859,7 +789,7 @@ function extractAndConvertToMarkdown() {
     try {
         console.log('Starting article extraction...');
         const documentClone = document.cloneNode(true);
-        
+
         // Check if Readability is available
         if (typeof Readability === 'undefined') {
             console.error('Readability is not defined');
@@ -868,7 +798,7 @@ function extractAndConvertToMarkdown() {
 
         console.log('Creating Readability instance...');
         const reader = new Readability(documentClone);
-        
+
         console.log('Parsing article...');
         const article = reader.parse();
 
@@ -888,7 +818,7 @@ function extractAndConvertToMarkdown() {
 
         // Convert to Markdown
         let markdown = `# ${article.title}\n\n`;
-        
+
         // Process each node in the article content
         function processNode(node) {
             if (node.nodeType === Node.TEXT_NODE) {
@@ -973,19 +903,18 @@ function initializeFolderUI() {
 }
 
 // Load folders for popup (with tree hierarchy)
-function loadFoldersForPopup() {
-    chrome.storage.sync.get(['folders', 'uncategorizedName'], function(result) {
-        const folders = result.folders || [];
-        const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
-        const folderSelect = document.getElementById('folder-select');
+async function loadFoldersForPopup() {
+    const result = await chrome.storage.sync.get(['folders', 'uncategorizedName']);
+    const folders = result.folders || [];
+    const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
+    const folderSelect = document.getElementById('folder-select');
 
-        // Clear existing options except the first one
-        folderSelect.innerHTML = `<option value="null">${uncategorizedName}</option>`;
+    // Clear existing options except the first one
+    folderSelect.innerHTML = `<option value="null">${uncategorizedName}</option>`;
 
-        // Build tree and add options with indentation
-        const tree = buildFolderTreeForPopup(folders);
-        addFolderOptionsToSelect(folderSelect, tree, 0);
-    });
+    // Build tree and add options with indentation
+    const tree = buildFolderTreeForPopup(folders);
+    addFolderOptionsToSelect(folderSelect, tree, 0);
 }
 
 // Build folder tree from flat list (for popup)
@@ -1017,15 +946,14 @@ function addFolderOptionsToSelect(selectElement, tree, level) {
 }
 
 // Load last selected folder
-function loadDefaultFolder() {
-    chrome.storage.sync.get(['lastSelectedFolder'], function(result) {
-        const lastSelectedFolder = result.lastSelectedFolder;
-        const folderSelect = document.getElementById('folder-select');
+async function loadDefaultFolder() {
+    const result = await chrome.storage.sync.get(['lastSelectedFolder']);
+    const lastSelectedFolder = result.lastSelectedFolder;
+    const folderSelect = document.getElementById('folder-select');
 
-        if (lastSelectedFolder !== undefined) {
-            folderSelect.value = lastSelectedFolder || 'null';
-        }
-    });
+    if (lastSelectedFolder !== undefined) {
+        folderSelect.value = lastSelectedFolder || 'null';
+    }
 }
 
 // Save last selected folder when user changes selection

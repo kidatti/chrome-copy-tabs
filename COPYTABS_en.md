@@ -33,6 +33,16 @@ You can save reference articles and pass the list to tools like Notebook LM.
 
 # Change Log
 
+## v.0.9.6
+
+- Minor design adjustments
+
+## v.0.9.5
+
+- Added drag & drop tabs to folders
+- Added storage usage display
+- Added validation
+
 ## v.0.9.4
 
 - Folder reordering and tree structure support

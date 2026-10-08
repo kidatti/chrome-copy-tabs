@@ -1,4 +1,16 @@
-let currentFolderId = null;
+let currentFolderId = CopyTabsView.ALL_FOLDERS;
+let searchQuery = '';
+let sortMode = 'newest';
+let visibleTabs = [];
+const selectedTabIds = new Set();
+let managerReady = false;
+let operationInProgress = false;
+let loadVersion = 0;
+let refreshTimer;
+let toastTimer;
+let lastDeletion = null;
+let currentDeleteTabIds = [];
+let modalReturnFocus = null;
 let currentRenameFolderId = null;
 let currentDeleteFolderId = null;
 let currentEditTabId = null;
@@ -27,104 +39,108 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     // Initialize UI after language is loaded
-    initializeUI();
+    try { await initializeUI(); }
+    catch (error) { console.error(error); showToast(text('operationFailed'), 'error'); }
 });
 
-function initializeUI() {
-    // Set folder-related UI text
-    document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
-    document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
+function text(key, values = {}) {
+    return Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), i18n.getString(key));
+}
 
-    // Set copy button texts
-    document.getElementById('copy-urls-btn').textContent = i18n.getString('copyUrls');
-    document.getElementById('copy-titles-urls-btn').textContent = i18n.getString('copyTitlesUrls');
-
-    // Set modal UI text
+function updateManagerTexts() {
+    document.documentElement.lang = getUserLanguage();
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        element.textContent = i18n.getString(element.dataset.i18n);
+    });
+    document.title = `CopyTabs · ${text('savedPages')}`;
+    document.getElementById('add-folder-btn').textContent = text('addFolder');
+    document.getElementById('tab-search').placeholder = text('searchPages');
+    document.getElementById('settingsIcon').setAttribute('aria-label', text('settingsTitle'));
+    document.querySelector('.rename-uncategorized-btn').setAttribute('aria-label', text('renameFolderTitle'));
+    document.querySelectorAll('.modal-close').forEach(button => button.setAttribute('aria-label', text('closeDialog')));
+    document.getElementById('folder-list').setAttribute('aria-label', text('folders'));
     initializeModalTexts();
+}
 
-    // Initialize folder management
+async function initializeUI() {
+    updateManagerTexts();
     initializeFolderManagement();
-
-    // Initialize modal functionality
     initializeModals();
-
-    // Add click event for uncategorized folder
-    const uncategorizedFolder = document.querySelector('[data-folder-id="null"]');
-    uncategorizedFolder.addEventListener('click', function() {
-        selectFolder(null);
+    document.getElementById('all-folders').addEventListener('click', () => selectFolder(CopyTabsView.ALL_FOLDERS));
+    const uncategorized = document.querySelector('.folder-item[data-folder-id="null"]');
+    uncategorized.addEventListener('click', () => selectFolder(null));
+    uncategorized.addEventListener('dragover', function(e) {
+        if (e.dataTransfer.types.includes('application/tab-id')) {
+            e.preventDefault();
+            this.classList.add('tab-drop-target');
+        }
     });
-
-    // Add drag event listeners to uncategorized folder to prevent drops
-    uncategorizedFolder.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        // Don't show any drop indicators for uncategorized
-    });
-    uncategorizedFolder.addEventListener('dragleave', function(e) {
-        // No-op
-    });
-    uncategorizedFolder.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        // Don't allow dropping on uncategorized
-    });
-
-    // Add click event for uncategorized folder rename button
-    document.querySelector('.rename-uncategorized-btn').addEventListener('click', function(e) {
+    uncategorized.addEventListener('dragleave', handleFolderDragLeave);
+    uncategorized.addEventListener('drop', handleFolderDrop);
+    document.querySelector('.rename-uncategorized-btn').addEventListener('click', e => {
         e.stopPropagation();
         renameUncategorizedFolder();
     });
-
-    // Add click event for settings icon
-    document.getElementById('settingsIcon').addEventListener('click', function() {
-        chrome.runtime.openOptionsPage();
+    document.getElementById('settingsIcon').addEventListener('click', () => chrome.runtime.openOptionsPage());
+    document.getElementById('copy-pages').addEventListener('click', copyPages);
+    document.getElementById('tab-search').addEventListener('input', function() {
+        searchQuery = this.value;
+        selectedTabIds.clear();
+        if (searchQuery.trim() && sortMode === 'manual') setSortMode('newest');
+        loadAllMarkedTabs();
     });
-
-    // Add click events for copy buttons
-    document.getElementById('copy-urls-btn').addEventListener('click', copyURLsOnly);
-    document.getElementById('copy-titles-urls-btn').addEventListener('click', copyTitlesAndURLs);
-
-    // Load folders and tabs
-    loadFolders();
-    loadUncategorizedName();
-    loadAllMarkedTabs();
+    document.getElementById('sort-select').addEventListener('change', function() {
+        setSortMode(this.value);
+        loadAllMarkedTabs();
+    });
+    document.getElementById('select-all').addEventListener('change', function() {
+        visibleTabs.forEach(tab => this.checked ? selectedTabIds.add(String(tab.id)) : selectedTabIds.delete(String(tab.id)));
+        document.querySelectorAll('.tab-checkbox').forEach(box => {
+            box.checked = selectedTabIds.has(box.dataset.id);
+            box.closest('.tab-item').classList.toggle('selected', box.checked);
+        });
+        updateSelectionState();
+    });
+    document.getElementById('bulk-move').addEventListener('click', () => moveSelectedTabs());
+    document.getElementById('bulk-delete').addEventListener('click', showDeleteTabsModal);
+    document.getElementById('delete-tabs-cancel').addEventListener('click', closeAllModals);
+    document.getElementById('delete-tabs-confirm').addEventListener('click', () => {
+        const ids = [...currentDeleteTabIds];
+        closeAllModals();
+        deleteTabs(ids);
+    });
+    await migrateFromMarkedTabs();
+    await migrateToFolderSupport();
+    await cleanupDuplicateDataKeys();
+    await loadFolders();
+    await loadUncategorizedName();
+    managerReady = true;
+    await loadAllMarkedTabs();
 }
 
-// Listen for storage changes to update language and folders
+function setSortMode(mode) {
+    sortMode = mode;
+    document.getElementById('sort-select').value = mode;
+}
+
+// Refresh both the index and content when another extension window changes data.
 chrome.storage.onChanged.addListener(function(changes, namespace) {
-    if (namespace === 'sync' && changes.language) {
-        console.log('All_tabs: Language setting changed to:', changes.language.newValue);
-
-        // Set the new language
-        if (changes.language.newValue) {
-            if (changes.language.newValue !== 'auto') {
-                i18n.setLanguage(changes.language.newValue);
-            } else {
-                i18n.setLanguage('auto');
-            }
-        } else {
-            i18n.setLanguage('en');
+    if (namespace !== 'sync' || !managerReady) return;
+    if (changes.language) {
+        i18n.setLanguage(changes.language.newValue || 'auto');
+        updateManagerTexts();
+    }
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(async () => {
+        try {
+            await loadFolders();
+            await loadUncategorizedName();
+            await loadAllMarkedTabs();
+        } catch (error) {
+            showToast(text('operationFailed'), 'error');
+            console.error(error);
         }
-
-        // Update all UI text
-        document.getElementById('add-folder-btn').textContent = i18n.getString('addFolder');
-        document.getElementById('uncategorized-name').textContent = i18n.getString('uncategorized');
-        document.getElementById('copy-urls-btn').textContent = i18n.getString('copyUrls');
-        document.getElementById('copy-titles-urls-btn').textContent = i18n.getString('copyTitlesUrls');
-
-        // Update modal UI text
-        initializeModalTexts();
-
-        // Reload uncategorized name
-        loadUncategorizedName();
-
-        // Reload tabs to update any displayed text
-        loadAllMarkedTabs();
-    }
-    
-    // Listen for folder changes and update all folder selects
-    if (namespace === 'sync' && changes.folders) {
-        updateAllFolderSelects();
-    }
+    }, 80);
 });
 
 // Function to clean up duplicate dataKeys
@@ -238,6 +254,14 @@ function initializeModals() {
         if (e.key === 'Escape') {
             closeAllModals();
         }
+        if (e.key === 'Tab') {
+            const modal = document.querySelector('.modal.show');
+            if (!modal) return;
+            const controls = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled])')];
+            const first = controls[0], last = controls[controls.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
     });
     
     // Enter key to confirm in input modals
@@ -268,11 +292,20 @@ function initializeModals() {
 
 // Modal control functions
 function showModal(modalId) {
+    modalReturnFocus = document.activeElement;
     document.getElementById('modal-overlay').classList.add('show');
-    document.getElementById(modalId).classList.add('show');
+    const modal = document.getElementById(modalId);
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', modal.querySelector('h3').id);
+    modal.classList.add('show');
+    document.querySelector('.container').inert = true;
+    document.querySelector('.app-header').inert = true;
+    (modal.querySelector('input') || modal.querySelector('.modal-btn.cancel') || modal.querySelector('button'))?.focus();
 }
 
 function closeAllModals() {
+    if (!document.getElementById('modal-overlay').classList.contains('show')) return;
     document.getElementById('modal-overlay').classList.remove('show');
     document.querySelectorAll('.modal').forEach(modal => {
         modal.classList.remove('show');
@@ -289,6 +322,11 @@ function closeAllModals() {
     currentDeleteFolderId = null;
     currentEditTabId = null;
     addSubfolderParentId = null;
+    currentDeleteTabIds = [];
+    document.querySelector('.container').inert = false;
+    document.querySelector('.app-header').inert = false;
+    if (modalReturnFocus?.isConnected) modalReturnFocus.focus();
+    modalReturnFocus = null;
 }
 
 // Migrate data to include folder support
@@ -426,7 +464,7 @@ function getMaxSubtreeDepth(folders, folderId) {
 async function loadFolders() {
     await migrateToTreeStructure();
 
-    const result = await chrome.storage.sync.get(['folders']);
+    const result = await chrome.storage.sync.get(null);
     const folders = result.folders || [];
     const folderList = document.getElementById('folder-list');
 
@@ -438,8 +476,11 @@ async function loadFolders() {
     // Build and render tree structure
     const tree = buildFolderTree(folders);
     renderFolderTree(tree, folderList, 0, folders);
-
-    updateFolderCounts();
+    document.querySelectorAll('.folder-item').forEach(item => item.classList.toggle('active', item.dataset.folderId === String(currentFolderId)));
+    const destination = document.getElementById('bulk-folder-select');
+    const previousValue = destination.value;
+    populateFolderSelect(destination, folders.some(folder => folder.id === previousValue) ? previousValue : null, result);
+    updateFolderCounts(result);
 }
 
 // Render folder tree recursively
@@ -475,12 +516,18 @@ function createFolderElement(folder, level = 0, allFolders = []) {
     const folderLeft = document.createElement('div');
     folderLeft.className = 'folder-left';
 
-    const toggleSpan = document.createElement('span');
+    const toggleSpan = document.createElement(hasChildren ? 'button' : 'span');
+    if (hasChildren) {
+        toggleSpan.type = 'button';
+        toggleSpan.setAttribute('aria-label', folder.name);
+        toggleSpan.setAttribute('aria-expanded', String(!folder.collapsed));
+    }
     toggleSpan.className = toggleClass;
     toggleSpan.setAttribute('data-folder-id', folder.id);
     folderLeft.appendChild(toggleSpan);
 
-    const folderNameDiv = document.createElement('div');
+    const folderNameDiv = document.createElement('button');
+    folderNameDiv.type = 'button';
     folderNameDiv.className = 'folder-name';
     folderNameDiv.textContent = folder.name;
     folderLeft.appendChild(folderNameDiv);
@@ -495,7 +542,8 @@ function createFolderElement(folder, level = 0, allFolders = []) {
         const addBtn = document.createElement('button');
         addBtn.className = 'folder-btn add-subfolder-btn';
         addBtn.setAttribute('data-folder-id', folder.id);
-        addBtn.title = i18n.getString('addSubfolder') || 'Add Subfolder';
+        addBtn.title = i18n.getString('addSubfolder');
+        addBtn.setAttribute('aria-label', addBtn.title);
         const addImg = document.createElement('img');
         addImg.src = 'images/add.svg';
         addImg.alt = 'Add';
@@ -506,6 +554,7 @@ function createFolderElement(folder, level = 0, allFolders = []) {
     const renameBtn = document.createElement('button');
     renameBtn.className = 'folder-btn rename-folder-btn';
     renameBtn.setAttribute('data-folder-id', folder.id);
+    renameBtn.setAttribute('aria-label', text('renameFolderTitle'));
     const renameImg = document.createElement('img');
     renameImg.src = 'images/edit.svg';
     renameImg.alt = 'Edit';
@@ -515,6 +564,7 @@ function createFolderElement(folder, level = 0, allFolders = []) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'folder-btn delete-folder-btn';
     deleteBtn.setAttribute('data-folder-id', folder.id);
+    deleteBtn.setAttribute('aria-label', text('deleteFolderTitle'));
     const deleteImg = document.createElement('img');
     deleteImg.src = 'images/delete.svg';
     deleteImg.alt = 'Delete';
@@ -592,6 +642,7 @@ async function toggleFolderCollapse(folderId) {
                 toggleSpan.className = folder.collapsed
                     ? 'folder-toggle has-children'
                     : 'folder-toggle has-children expanded';
+                toggleSpan.setAttribute('aria-expanded', String(!folder.collapsed));
             }
 
             const level = parseInt(folderElement.getAttribute('data-level')) || 0;
@@ -822,14 +873,8 @@ async function moveFolder(draggedId, targetId, position) {
 // Select folder
 function selectFolder(folderId) {
     currentFolderId = folderId;
-    
-    // Update active state
-    document.querySelectorAll('.folder-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    document.querySelector(`[data-folder-id="${folderId}"]`).classList.add('active');
-    
-    // Reload tabs for selected folder
+    selectedTabIds.clear();
+    if (folderId === CopyTabsView.ALL_FOLDERS && sortMode === 'manual') setSortMode('newest');
     loadAllMarkedTabs();
 }
 
@@ -1004,7 +1049,7 @@ async function performDeleteFolder(folderId) {
     allFolderIdsToDelete.forEach(id => updateAllFolderSelectsAfterDeletion(id));
     if (allFolderIdsToDelete.includes(currentFolderId)) {
         selectFolder(null);
-    } else if (currentFolderId === null) {
+    } else {
         loadAllMarkedTabs();
     }
 }
@@ -1030,279 +1075,270 @@ function updateAllFolderSelectsAfterDeletion(deletedFolderId) {
 }
 
 // Update folder counts
-async function updateFolderCounts() {
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    if (dataKeys.length === 0) {
-        document.querySelectorAll('.folder-count').forEach(el => {
-            el.textContent = '0';
-        });
-        return;
-    }
-
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    const folderCounts = {};
-
-    dataKeys.forEach(key => {
-        const tab = tabsData[key];
-        if (tab) {
-            const folderId = tab.folderId || 'null';
-            folderCounts[folderId] = (folderCounts[folderId] || 0) + 1;
-        }
+async function updateFolderCounts(suppliedStorage) {
+    const storage = suppliedStorage || await chrome.storage.sync.get(null);
+    const tabs = [...new Set(storage.dataKeys || [])].map(key => storage[key]).filter(tab => tab && tab.url && tab.id !== undefined);
+    const counts = {};
+    tabs.forEach(tab => {
+        const folder = tab.folderId || 'null';
+        counts[folder] = (counts[folder] || 0) + 1;
     });
-
     document.querySelectorAll('.folder-item').forEach(item => {
-        const folderId = item.getAttribute('data-folder-id');
-        const count = folderCounts[folderId] || 0;
-        const countElement = item.querySelector('.folder-count');
-        if (countElement) {
-            countElement.textContent = count;
-        }
+        const count = item.querySelector('.folder-count');
+        if (count) count.textContent = item.dataset.folderId === CopyTabsView.ALL_FOLDERS ? tabs.length : (counts[item.dataset.folderId] || 0);
     });
+}
+
+function viewOptions() {
+    return { folderId: currentFolderId, query: searchQuery, sort: sortMode };
+}
+
+function canReorderTabs() {
+    return currentFolderId !== CopyTabsView.ALL_FOLDERS && sortMode === 'manual' && !searchQuery.trim();
 }
 
 async function loadAllMarkedTabs() {
-    const tabList = document.getElementById('tab-list');
-    tabList.innerHTML = '';
-
-    // Check for and migrate old format and folder support, then cleanup duplicates
-    await migrateFromMarkedTabs();
-    await migrateToFolderSupport();
-    await cleanupDuplicateDataKeys();
-
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    if (dataKeys.length === 0) {
-        tabList.innerHTML = `
-            <div class="no-tabs">
-                ${i18n.getString('noMarkedTabs')}
-                <div style="margin-top: 20px;">
-                    <button id="open-options" style="padding: 10px 20px; background-color: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        ${i18n.getString('settingsTitle')}
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.getElementById('open-options').addEventListener('click', function() {
-            chrome.runtime.openOptionsPage();
-        });
-        updateFolderCounts();
-        return;
-    }
-
-    // Get all tab data using the dataKeys
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
-
-    // Filter tabs by current folder
-    if (currentFolderId !== null) {
-        allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
-    } else {
-        allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
-    }
-
-    // Sort tabs by order (if exists) or timestamp
-    allTabs.sort((a, b) => {
-        const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
-        const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
-        return orderA - orderB;
-    });
-
-    if (allTabs.length === 0) {
-        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
-        updateFolderCounts();
-        return;
-    }
-                
-    allTabs.forEach((tab, index) => {
-        // Ensure locked property exists for backward compatibility
-        if (tab.locked === undefined) {
-            tab.locked = false;
+    const version = ++loadVersion;
+    try {
+        const storage = await chrome.storage.sync.get(null);
+        if (version !== loadVersion) return;
+        const folders = storage.folders || [];
+        if (currentFolderId !== null && currentFolderId !== CopyTabsView.ALL_FOLDERS && !folders.some(f => f.id === currentFolderId)) {
+            currentFolderId = CopyTabsView.ALL_FOLDERS;
+            selectedTabIds.clear();
+            setSortMode('newest');
         }
-
-        // Ensure order property exists for drag and drop
-        if (tab.order === undefined) {
-            tab.order = index;
+        const allTabs = [...new Set(storage.dataKeys || [])].map(key => storage[key]).filter(tab => tab && tab.url && tab.id !== undefined);
+        visibleTabs = CopyTabsView.visibleTabs(allTabs, viewOptions());
+        const visibleIds = new Set(visibleTabs.map(tab => String(tab.id)));
+        [...selectedTabIds].forEach(id => { if (!visibleIds.has(id)) selectedTabIds.delete(id); });
+        const folderName = currentFolderId === CopyTabsView.ALL_FOLDERS ? text('savedPages')
+            : currentFolderId === null ? (storage.uncategorizedName || text('uncategorized'))
+            : folders.find(f => f.id === currentFolderId).name;
+        document.getElementById('view-title').textContent = folderName;
+        document.getElementById('result-count').textContent = text('pageCount', { count: visibleTabs.length });
+        document.querySelectorAll('.folder-item').forEach(item => {
+            const active = item.dataset.folderId === String(currentFolderId);
+            item.classList.toggle('active', active);
+            const trigger = item.matches('button') ? item : item.querySelector('.folder-name');
+            if (trigger) {
+                if (active) trigger.setAttribute('aria-current', 'page');
+                else trigger.removeAttribute('aria-current');
+            }
+        });
+        const manualOption = document.querySelector('#sort-select option[value="manual"]');
+        manualOption.disabled = currentFolderId === CopyTabsView.ALL_FOLDERS || !!searchQuery.trim();
+        document.getElementById('view-hint').textContent = text(canReorderTabs() ? 'manualSortHint'
+            : currentFolderId === CopyTabsView.ALL_FOLDERS ? 'allPagesHint' : 'folderDropHint');
+        const tabList = document.getElementById('tab-list');
+        tabList.replaceChildren();
+        if (!visibleTabs.length) {
+            const empty = document.createElement('div');
+            empty.className = 'no-tabs';
+            empty.textContent = text(searchQuery.trim() ? 'noSearchResults' : allTabs.length ? 'noTabsInFolder' : 'emptySavedPages');
+            tabList.appendChild(empty);
         }
+        visibleTabs.forEach(tab => tabList.appendChild(createTabElement(tab, storage)));
+        updateFolderCounts(storage);
+        updateSelectionState();
+    } catch (error) {
+        if (version === loadVersion) showToast(text('operationFailed'), 'error');
+        console.error(error);
+    }
+}
 
-        const tabElement = document.createElement('div');
-        tabElement.className = 'tab-item';
-        tabElement.setAttribute('draggable', 'true');
-        tabElement.setAttribute('data-tab-id', String(tab.id));
-
-        // Format the date
-        const date = new Date(tab.timestamp);
-        const formattedDate = date.toLocaleString();
-
-        const uncategorizedName = i18n.getString('uncategorized') || 'Uncategorized';
-
-        // Build tab element using DOM API for XSS safety
-        const tabInfo = document.createElement('div');
-        tabInfo.className = 'tab-info';
-        tabInfo.setAttribute('data-url', tab.url);
-        tabInfo.style.cursor = 'pointer';
-
-        const tabTitleEl = document.createElement('div');
-        tabTitleEl.className = 'tab-title';
-        tabTitleEl.textContent = tab.title;
-
-        const tabUrlEl = document.createElement('div');
-        tabUrlEl.className = 'tab-url';
-        tabUrlEl.textContent = tab.url;
-
-        const timestampEl = document.createElement('div');
-        timestampEl.className = 'timestamp';
-        timestampEl.textContent = formattedDate;
-
-        tabInfo.appendChild(tabTitleEl);
-        tabInfo.appendChild(tabUrlEl);
-        tabInfo.appendChild(timestampEl);
-
-        const tabControls = document.createElement('div');
-        tabControls.className = 'tab-controls';
-
-        const folderSelect = document.createElement('select');
-        folderSelect.className = 'folder-select';
-        folderSelect.setAttribute('data-id', String(tab.id));
-        const defaultOption = document.createElement('option');
-        defaultOption.value = 'null';
-        defaultOption.textContent = uncategorizedName;
-        folderSelect.appendChild(defaultOption);
-
-        const copyIcon = document.createElement('img');
-        copyIcon.className = 'copy-icon';
-        copyIcon.src = 'images/copy.svg';
-        copyIcon.alt = 'Copy';
-        copyIcon.title = i18n.getString('copyButton');
-        copyIcon.setAttribute('data-id', String(tab.id));
-
-        const lockIcon = document.createElement('img');
-        lockIcon.className = 'lock-icon' + (tab.locked ? ' locked' : '');
-        lockIcon.src = 'images/' + (tab.locked ? 'lock' : 'unlock') + '.svg';
-        lockIcon.alt = tab.locked ? 'Locked' : 'Unlocked';
-        lockIcon.setAttribute('data-id', String(tab.id));
-
-        const editIcon = document.createElement('img');
-        editIcon.className = 'edit-icon';
-        editIcon.src = 'images/edit.svg';
-        editIcon.alt = 'Edit';
-        editIcon.title = i18n.getString('editTab');
-        editIcon.setAttribute('data-id', String(tab.id));
-
-        const deleteIcon = document.createElement('img');
-        deleteIcon.className = 'delete-icon';
-        deleteIcon.src = 'images/delete.svg';
-        deleteIcon.alt = 'Delete';
-        deleteIcon.title = i18n.getString('deleteButton');
-        deleteIcon.setAttribute('data-id', String(tab.id));
-        if (tab.locked) deleteIcon.style.display = 'none';
-
-        tabControls.appendChild(folderSelect);
-        tabControls.appendChild(copyIcon);
-        tabControls.appendChild(lockIcon);
-        tabControls.appendChild(editIcon);
-        tabControls.appendChild(deleteIcon);
-
-        tabElement.appendChild(tabInfo);
-        tabElement.appendChild(tabControls);
-
-        // Add click event to open the tab
-        tabInfo.addEventListener('click', function() {
-            const url = this.getAttribute('data-url');
-            chrome.tabs.create({ url: url });
-        });
-
-        // Add lock toggle functionality
-        lockIcon.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleLock(tab.id);
-        });
-
-        // Add edit icon functionality
-        editIcon.addEventListener('click', function(e) {
-            e.stopPropagation();
-            editTab(tab.id);
-        });
-
-        deleteIcon.addEventListener('click', function(e) {
-            e.stopPropagation();
-            deleteTab(tab.id);
-        });
-
-        // Add copy icon functionality
-        copyIcon.addEventListener('click', function(e) {
-            e.stopPropagation();
-            copySingleTab(tab.title, tab.url);
-        });
-
-        // Add folder select functionality
-        populateFolderSelect(folderSelect, tab.folderId);
-        folderSelect.addEventListener('change', function(e) {
-            e.stopPropagation();
-            moveTabToFolder(tab.id, this.value === 'null' ? null : this.value);
-        });
-
-        // Add drag and drop functionality
-        tabElement.addEventListener('dragstart', handleDragStart);
-        tabElement.addEventListener('dragover', handleDragOver);
-        tabElement.addEventListener('drop', handleDrop);
-        tabElement.addEventListener('dragend', handleDragEnd);
-        tabElement.addEventListener('dragleave', handleDragLeave);
-
-        tabList.appendChild(tabElement);
+function createTabElement(tab, storage) {
+    const row = document.createElement('div');
+    row.className = 'tab-item' + (selectedTabIds.has(String(tab.id)) ? ' selected' : '');
+    row.dataset.tabId = String(tab.id);
+    // Dragging to folders remains available in all sort modes.
+    row.draggable = true;
+    const selection = document.createElement('label');
+    selection.className = 'tab-checkbox-label';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'tab-checkbox';
+    checkbox.dataset.id = String(tab.id);
+    checkbox.checked = selectedTabIds.has(String(tab.id));
+    checkbox.setAttribute('aria-label', text('selectPage', { title: tab.title || tab.url }));
+    selection.appendChild(checkbox);
+    checkbox.addEventListener('change', () => {
+        checkbox.checked ? selectedTabIds.add(String(tab.id)) : selectedTabIds.delete(String(tab.id));
+        row.classList.toggle('selected', checkbox.checked);
+        updateSelectionState();
     });
+    const info = document.createElement('a');
+    info.className = 'tab-info';
+    const safe = isSafePageUrl(tab.url);
+    info.href = safe ? tab.url : '#';
+    info.addEventListener('click', e => {
+        e.preventDefault();
+        if (safe) chrome.tabs.create({ url: tab.url });
+        else showToast(text('operationFailed'), 'error');
+    });
+    const title = document.createElement('div');
+    title.className = 'tab-title';
+    title.textContent = tab.title || tab.url;
+    const url = document.createElement('div');
+    url.className = 'tab-url';
+    url.textContent = tab.url;
+    const meta = document.createElement('div');
+    meta.className = 'tab-meta';
+    const folder = document.createElement('span');
+    folder.className = 'tab-folder';
+    folder.textContent = (storage.folders || []).find(f => f.id === tab.folderId)?.name || storage.uncategorizedName || text('uncategorized');
+    const date = document.createElement('time');
+    date.className = 'timestamp';
+    if (Number.isFinite(Date.parse(tab.timestamp))) {
+        date.dateTime = tab.timestamp;
+        date.textContent = new Date(tab.timestamp).toLocaleString(getUserLanguage());
+    }
+    meta.append(folder, date);
+    if (tab.locked) {
+        const locked = document.createElement('span');
+        locked.textContent = text('protectedPage');
+        meta.appendChild(locked);
+    }
+    info.append(title, url, meta);
+    const controls = document.createElement('div');
+    controls.className = 'tab-controls';
+    const destination = document.createElement('select');
+    destination.className = 'folder-select';
+    destination.setAttribute('aria-label', text('moveDestination'));
+    populateFolderSelect(destination, tab.folderId, storage);
+    destination.addEventListener('change', () => moveTabToFolder(tab.id, destination.value === 'null' ? null : destination.value));
+    controls.appendChild(destination);
+    controls.appendChild(tabAction('copy-icon', 'copy', text('copyButton'), () => copySingleTab(tab.title, tab.url)));
+    const lock = tabAction('lock-icon' + (tab.locked ? ' locked' : ''), tab.locked ? 'lock' : 'unlock', text(tab.locked ? 'unprotectPage' : 'protectPage'), () => toggleLock(tab.id));
+    lock.setAttribute('aria-pressed', String(!!tab.locked));
+    controls.appendChild(lock);
+    controls.appendChild(tabAction('edit-icon', 'edit', text('editTab'), () => editTab(tab.id)));
+    const remove = tabAction('delete-icon', 'delete', text('deleteButton'), () => deleteTab(tab.id));
+    remove.hidden = !!tab.locked;
+    controls.appendChild(remove);
+    row.append(selection, info, controls);
+    row.addEventListener('dragstart', handleDragStart);
+    row.addEventListener('dragover', handleDragOver);
+    row.addEventListener('drop', handleDrop);
+    row.addEventListener('dragend', handleDragEnd);
+    row.addEventListener('dragleave', handleDragLeave);
+    return row;
+}
 
-    updateFolderCounts();
+function isSafePageUrl(url) {
+    try { return ['http:', 'https:', 'file:', 'chrome:', 'chrome-extension:', 'about:'].includes(new URL(url).protocol); }
+    catch { return false; }
+}
+
+function tabAction(className, image, label, action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tab-action ' + className;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    const icon = document.createElement('img');
+    icon.src = `images/${image}.svg`;
+    icon.alt = '';
+    button.appendChild(icon);
+    button.addEventListener('click', e => { e.stopPropagation(); action(); });
+    return button;
+}
+
+function updateSelectionState() {
+    const count = visibleTabs.filter(tab => selectedTabIds.has(String(tab.id))).length;
+    const all = document.getElementById('select-all');
+    all.checked = visibleTabs.length > 0 && count === visibleTabs.length;
+    all.indeterminate = count > 0 && count < visibleTabs.length;
+    all.disabled = !visibleTabs.length || operationInProgress;
+    document.getElementById('selection-count').textContent = text('selectedCount', { count });
+    document.getElementById('copy-pages').textContent = text(count ? 'copySelected' : 'copyDisplayed', { count: count || visibleTabs.length });
+    document.getElementById('copy-pages').disabled = !visibleTabs.length || operationInProgress;
+    document.getElementById('bulk-toolbar').hidden = !count;
+    document.getElementById('bulk-move').disabled = operationInProgress;
+    document.getElementById('bulk-delete').disabled = operationInProgress || !visibleTabs.some(tab => selectedTabIds.has(String(tab.id)) && !tab.locked);
+}
+
+async function runManagerOperation(operation) {
+    if (operationInProgress) return;
+    operationInProgress = true;
+    updateSelectionState();
+    try { await operation(); }
+    catch (error) { console.error(error); showToast(text('operationFailed'), 'error'); }
+    finally { operationInProgress = false; await loadAllMarkedTabs(); }
+}
+
+async function showDeleteTabsModal() {
+    try {
+        const storage = await chrome.storage.sync.get(null);
+        const ids = visibleTabs.filter(tab => selectedTabIds.has(String(tab.id))).map(tab => String(tab.id));
+        const plan = CopyTabsView.deletePlan(storage, ids);
+        if (!Object.keys(plan.removed).length) return showToast(text('onlyLockedSelected'), 'error');
+        currentDeleteTabIds = Object.values(plan.removed).map(tab => String(tab.id));
+        document.getElementById('delete-tabs-message').textContent = text('confirmDeletePages', { count: currentDeleteTabIds.length });
+        showModal('delete-tabs-modal');
+    } catch (error) { console.error(error); showToast(text('operationFailed'), 'error'); }
 }
 
 async function deleteTab(tabId) {
-    // Find and remove the tab element from DOM first
-    const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
+    return deleteTabs([String(tabId)]);
+}
 
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
+async function deleteTabs(ids) {
+    return runManagerOperation(async () => {
+        const storage = await chrome.storage.sync.get(null);
+        const plan = CopyTabsView.deletePlan(storage, ids);
+        const keys = Object.keys(plan.removed);
+        if (!keys.length) return showToast(text('onlyLockedSelected'), 'error');
+        // Remove the index first so a failed write never leaves dangling indexed tabs.
+        await chrome.storage.sync.set({ dataKeys: plan.dataKeys });
+        lastDeletion = { removed: plan.removed, expiresAt: Date.now() + 10000 };
+        try { await chrome.storage.sync.remove(keys); }
+        catch (error) { console.error('Could not remove unindexed records', error); }
+        ids.forEach(id => selectedTabIds.delete(String(id)));
+        showToast(text('deletedCount', { count: keys.length }), 'success', 10000);
+    });
+}
 
-    // Find which key contains the tab with the given ID
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    const keyToRemove = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
+async function undoDeleteTabs() {
+    if (!lastDeletion || lastDeletion.expiresAt <= Date.now()) return showToast(text('undoExpired'), 'error');
+    const deletion = lastDeletion;
+    return runManagerOperation(async () => {
+        const storage = await chrome.storage.sync.get(null);
+        const updates = CopyTabsView.restoreUpdates(storage, deletion.removed);
+        await chrome.storage.sync.set(updates);
+        if (lastDeletion === deletion) lastDeletion = null;
+        showToast(text('restoredPages'));
+    });
+}
 
-    if (!keyToRemove) {
-        return;
-    }
+async function moveSelectedTabs() {
+    const value = document.getElementById('bulk-folder-select').value;
+    const ids = visibleTabs.filter(tab => selectedTabIds.has(String(tab.id))).map(tab => String(tab.id));
+    return moveTabs(ids, value === 'null' ? null : value);
+}
 
-    // Create updated dataKeys array without the removed key
-    const updatedDataKeys = dataKeys.filter(key => key !== keyToRemove);
-
-    // Remove the tab data and update the dataKeys array
-    await chrome.storage.sync.remove([keyToRemove]);
-    await chrome.storage.sync.set({ dataKeys: updatedDataKeys });
-
-    // Remove the tab element from DOM instead of reloading
-    if (tabElement) {
-        tabElement.remove();
-    }
-
-    // Update folder counts without full reload
-    updateFolderCounts();
-
-    // Check if tab list is empty and show no tabs message
-    const tabList = document.getElementById('tab-list');
-    if (tabList.children.length === 0) {
-        tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
-    }
+async function moveTabs(ids, folderId) {
+    return runManagerOperation(async () => {
+        const storage = await chrome.storage.sync.get(null);
+        const updates = CopyTabsView.moveUpdates(storage, ids, folderId);
+        const count = Object.keys(updates).filter(key => (storage[key].folderId || null) !== folderId).length;
+        if (Object.keys(updates).length) await chrome.storage.sync.set(updates);
+        selectedTabIds.clear();
+        showToast(text('movedCount', { count }));
+    });
 }
 
 // Populate folder select dropdown (with tree hierarchy)
-async function populateFolderSelect(selectElement, currentFolderId) {
-    const result = await chrome.storage.sync.get(['folders', 'uncategorizedName']);
+async function populateFolderSelect(selectElement, currentFolderId, suppliedStorage) {
+    const result = suppliedStorage || await chrome.storage.sync.get(['folders', 'uncategorizedName']);
     const folders = result.folders || [];
     const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
 
     // Clear existing options except the first one (未分類)
-    selectElement.innerHTML = `<option value="null">${uncategorizedName}</option>`;
+    const uncategorized = document.createElement('option');
+    uncategorized.value = 'null';
+    uncategorized.textContent = uncategorizedName;
+    selectElement.replaceChildren(uncategorized);
 
     // Build tree and add options with indentation
     const tree = buildFolderTree(folders);
@@ -1331,45 +1367,7 @@ function addFolderOptionsToSelectRecursive(selectElement, tree, level) {
 
 // Move tab to folder
 async function moveTabToFolder(tabId, folderId) {
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    const keyToUpdate = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
-
-    if (!keyToUpdate) {
-        return;
-    }
-
-    const tab = tabsData[keyToUpdate];
-    const oldFolderId = tab.folderId;
-    tab.folderId = folderId;
-
-    await chrome.storage.sync.set({ [keyToUpdate]: tab });
-
-    // Update folder counts
-    updateFolderCounts();
-
-    // If the tab is moved out of the current folder, remove it from the view
-    const shouldRemoveFromView = (
-        (currentFolderId === oldFolderId && currentFolderId !== folderId) ||
-        (currentFolderId === null && oldFolderId === null && folderId !== null) ||
-        (currentFolderId !== null && oldFolderId === null && currentFolderId !== folderId)
-    );
-
-    if (shouldRemoveFromView) {
-        // Find and remove the tab element from DOM
-        const tabElement = document.querySelector(`[data-id="${tabId}"]`).closest('.tab-item');
-        if (tabElement) {
-            tabElement.remove();
-        }
-
-        // Check if tab list is empty and show no tabs message
-        const tabList = document.getElementById('tab-list');
-        if (tabList.children.length === 0) {
-            tabList.innerHTML = `<div class="no-tabs">${i18n.getString('noTabsInFolder')}</div>`;
-        }
-    }
+    return moveTabs([String(tabId)], folderId);
 }
 
 // Update uncategorized name in UI
@@ -1401,108 +1399,41 @@ async function loadUncategorizedName() {
 }
 
 async function toggleLock(tabId) {
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    // Find which key contains the tab with the given ID
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    const keyToUpdate = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
-
-    if (!keyToUpdate) {
-        return;
-    }
-
-    // Toggle the locked state
-    const tab = tabsData[keyToUpdate];
-    tab.locked = !tab.locked;
-
-    // Update the storage and save the locked state properly
-    await chrome.storage.sync.set({ [keyToUpdate]: tab });
-
-    // Partial DOM update instead of full reload
-    const tabElement = document.querySelector(`[data-tab-id="${String(tabId)}"]`);
-    if (tabElement) {
-        const lockIcon = tabElement.querySelector('.lock-icon');
-        const deleteIcon = tabElement.querySelector('.delete-icon');
-        if (lockIcon) {
-            lockIcon.src = 'images/' + (tab.locked ? 'lock' : 'unlock') + '.svg';
-            lockIcon.alt = tab.locked ? 'Locked' : 'Unlocked';
-            lockIcon.className = 'lock-icon' + (tab.locked ? ' locked' : '');
-        }
-        if (deleteIcon) {
-            deleteIcon.style.display = tab.locked ? 'none' : '';
-        }
-    }
+    return runManagerOperation(async () => {
+        const storage = await chrome.storage.sync.get(null);
+        const key = (storage.dataKeys || []).find(key => storage[key] && String(storage[key].id) === String(tabId));
+        if (key) await chrome.storage.sync.set({ [key]: { ...storage[key], locked: !storage[key].locked } });
+    });
 }
 
-// Get currently displayed tabs
-async function getCurrentlyDisplayedTabs() {
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    if (dataKeys.length === 0) {
-        return [];
-    }
-
-    // Get all tab data using the dataKeys
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    let allTabs = dataKeys.map(key => tabsData[key]).filter(tab => tab);
-
-    // Filter tabs by current folder
-    if (currentFolderId !== null) {
-        allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
-    } else {
-        allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
-    }
-
-    // Sort tabs by timestamp (newest first)
-    allTabs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    return allTabs;
-}
-
-// Copy URLs only
-async function copyURLsOnly() {
-    const tabs = await getCurrentlyDisplayedTabs();
-    if (tabs.length === 0) {
+async function copyText(content) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
         return;
     }
-
-    const urls = tabs.map(tab => tab.url).join('\n');
-    const textarea = document.getElementById('copy-textarea');
-    textarea.value = urls;
-    textarea.select();
-    document.execCommand('copy');
-
-    // Show feedback
-    const btn = document.getElementById('copy-urls-btn');
-    const originalText = btn.textContent;
-    btn.textContent = i18n.getString('copied') || 'Copied!';
-    setTimeout(() => {
-        btn.textContent = originalText;
-    }, 2000);
-}
-
-// Copy titles and URLs
-async function copyTitlesAndURLs() {
-    const tabs = await getCurrentlyDisplayedTabs();
-    if (tabs.length === 0) {
-        return;
-    }
-
-    const content = tabs.map(tab => `${tab.title}\n${tab.url}`).join('\n\n');
+    const previousFocus = document.activeElement;
     const textarea = document.getElementById('copy-textarea');
     textarea.value = content;
     textarea.select();
-    document.execCommand('copy');
+    const copied = document.execCommand('copy');
+    previousFocus?.focus();
+    if (!copied) throw new Error('Clipboard copy failed');
+}
 
-    // Show feedback
-    const btn = document.getElementById('copy-titles-urls-btn');
-    const originalText = btn.textContent;
-    btn.textContent = i18n.getString('copied') || 'Copied!';
-    setTimeout(() => {
-        btn.textContent = originalText;
-    }, 2000);
+async function copyPages() {
+    // Snapshot the scope before awaiting storage so changing filters cannot change the copy target.
+    const options = viewOptions();
+    const selected = new Set(selectedTabIds);
+    const format = document.getElementById('copy-format').value;
+    try {
+        const storage = await chrome.storage.sync.get(null);
+        const tabs = [...new Set(storage.dataKeys || [])].map(key => storage[key]).filter(tab => tab && tab.url && tab.id !== undefined);
+        let targets = CopyTabsView.visibleTabs(tabs, options);
+        if (selected.size) targets = targets.filter(tab => selected.has(String(tab.id)));
+        if (!targets.length) return;
+        await copyText(CopyTabsView.formatTabs(targets, format));
+        showToast(text('copiedCount', { count: targets.length }));
+    } catch (error) { console.error(error); showToast(text('copyFailed'), 'error'); }
 }
 
 // Edit tab
@@ -1533,81 +1464,57 @@ async function editTab(tabId) {
 
 // Confirm edit tab
 async function confirmEditTab() {
-    if (!currentEditTabId) {
-        return;
-    }
-
+    const id = currentEditTabId;
     const newTitle = document.getElementById('edit-tab-title-input').value.trim();
     const newUrl = document.getElementById('edit-tab-url-input').value.trim();
-
-    if (!newTitle || !newUrl) {
-        return;
-    }
-
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    const keyToUpdate = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(currentEditTabId));
-
-    if (!keyToUpdate) {
-        return;
-    }
-
-    const tab = tabsData[keyToUpdate];
-    tab.title = newTitle;
-    tab.url = newUrl;
-
-    await chrome.storage.sync.set({ [keyToUpdate]: tab });
-    closeAllModals();
-
-    // Partial DOM update instead of full reload
-    const tabElement = document.querySelector(`[data-tab-id="${String(currentEditTabId)}"]`);
-    if (tabElement) {
-        const titleEl = tabElement.querySelector('.tab-title');
-        const urlEl = tabElement.querySelector('.tab-url');
-        const tabInfo = tabElement.querySelector('.tab-info');
-        if (titleEl) titleEl.textContent = newTitle;
-        if (urlEl) urlEl.textContent = newUrl;
-        if (tabInfo) tabInfo.setAttribute('data-url', newUrl);
-    }
+    if (!id || !newTitle || !newUrl) return;
+    if (!isSafePageUrl(newUrl)) return showToast(text('operationFailed'), 'error');
+    return runManagerOperation(async () => {
+        const storage = await chrome.storage.sync.get(null);
+        const key = (storage.dataKeys || []).find(key => storage[key] && String(storage[key].id) === String(id));
+        if (!key) return closeAllModals();
+        await chrome.storage.sync.set({ [key]: { ...storage[key], title: newTitle, url: newUrl } });
+        closeAllModals();
+    });
 }
 
-// Show toast notification
+// Keep Undo available for ten seconds, even if another action shows a message.
 function showToast(message, type = 'success', duration = 2000) {
     const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
-
-    // Show toast
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10);
-
-    // Hide toast after duration
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, duration);
+    clearTimeout(toastTimer);
+    toast.replaceChildren();
+    const label = document.createElement('span');
+    label.textContent = message;
+    toast.appendChild(label);
+    toast.className = `toast ${type} show`;
+    const remaining = lastDeletion ? lastDeletion.expiresAt - Date.now() : 0;
+    if (remaining > 0) {
+        const undo = document.createElement('button');
+        undo.type = 'button';
+        undo.textContent = text('undo');
+        undo.addEventListener('click', undoDeleteTabs);
+        toast.appendChild(undo);
+        duration = Math.max(duration, remaining);
+    }
+    toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
 }
 
-// Copy single tab title and URL
-function copySingleTab(title, url) {
-    const content = `${title}\n${url}`;
-    const textarea = document.getElementById('copy-textarea');
-    textarea.value = content;
-    textarea.select();
-    document.execCommand('copy');
-
-    // Show toast notification
-    showToast(i18n.getString('copied') || 'Copied!', 'success');
+async function copySingleTab(title, url) {
+    try {
+        await copyText(CopyTabsView.formatTabs([{ title, url }], 'title'));
+        showToast(text('copiedCount', { count: 1 }));
+    } catch (error) { console.error(error); showToast(text('copyFailed'), 'error'); }
 }
 
 // Drag and drop event handlers
 function handleDragStart(e) {
+    if (e.target.closest('button, input, select, label')) {
+        e.preventDefault();
+        return;
+    }
     draggedElement = this;
     this.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', this.innerHTML);
     e.dataTransfer.setData('application/tab-id', this.getAttribute('data-tab-id'));
 }
 
@@ -1617,7 +1524,7 @@ function handleDragOver(e) {
     }
     e.dataTransfer.dropEffect = 'move';
 
-    if (this !== draggedElement) {
+    if (canReorderTabs() && draggedElement && this !== draggedElement) {
         this.classList.add('drag-over');
     }
 
@@ -1633,7 +1540,7 @@ function handleDrop(e) {
         e.stopPropagation();
     }
 
-    if (draggedElement !== this) {
+    if (canReorderTabs() && draggedElement && draggedElement !== this) {
         // Get the dragged tab ID and the target tab ID
         const draggedId = draggedElement.getAttribute('data-tab-id');
         const targetId = this.getAttribute('data-tab-id');
@@ -1665,69 +1572,22 @@ function handleDragEnd(e) {
 
 // Reorder tabs in storage
 async function reorderTabs(draggedId, targetId) {
-    const result = await chrome.storage.sync.get(['dataKeys']);
-    const dataKeys = result.dataKeys || [];
-
-    const tabsData = await chrome.storage.sync.get(dataKeys);
-    // Get all tabs for the current folder
-    let allTabs = dataKeys.map(key => ({ key, ...tabsData[key] })).filter(tab => tab.id);
-
-    // Filter tabs by current folder
-    if (currentFolderId !== null) {
-        allTabs = allTabs.filter(tab => tab.folderId === currentFolderId);
-    } else {
-        allTabs = allTabs.filter(tab => !tab.folderId || tab.folderId === null);
-    }
-
-    // Sort by current order or timestamp
-    allTabs.sort((a, b) => {
-        const orderA = a.order !== undefined ? a.order : new Date(a.timestamp).getTime();
-        const orderB = b.order !== undefined ? b.order : new Date(b.timestamp).getTime();
-        return orderA - orderB;
+    if (!canReorderTabs()) return;
+    const options = viewOptions();
+    return runManagerOperation(async () => {
+        const storage = await chrome.storage.sync.get(null);
+        const keys = storage.dataKeys || [];
+        const tabs = CopyTabsView.visibleTabs(keys.map(key => storage[key]).filter(Boolean), options);
+        const from = tabs.findIndex(tab => String(tab.id) === String(draggedId));
+        const to = tabs.findIndex(tab => String(tab.id) === String(targetId));
+        if (from < 0 || to < 0 || from === to) return;
+        const [dragged] = tabs.splice(from, 1);
+        tabs.splice(to, 0, dragged);
+        const updates = {};
+        tabs.forEach((tab, order) => {
+            const key = keys.find(key => storage[key] && String(storage[key].id) === String(tab.id));
+            updates[key] = { ...storage[key], order };
+        });
+        await chrome.storage.sync.set(updates);
     });
-
-    // Find the positions of dragged and target tabs
-    const draggedIndex = allTabs.findIndex(tab => String(tab.id) === String(draggedId));
-    const targetIndex = allTabs.findIndex(tab => String(tab.id) === String(targetId));
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-        return;
-    }
-
-    // Move the dragged tab to the target position
-    const [draggedTab] = allTabs.splice(draggedIndex, 1);
-    allTabs.splice(targetIndex, 0, draggedTab);
-
-    // Update order for all tabs in the current folder
-    const updateData = {};
-    allTabs.forEach((tab, index) => {
-        tab.order = index;
-        updateData[tab.key] = {
-            id: tab.id,
-            title: tab.title,
-            url: tab.url,
-            timestamp: tab.timestamp,
-            locked: tab.locked,
-            folderId: tab.folderId,
-            order: tab.order,
-            html: tab.html
-        };
-    });
-
-    // Save the updated order
-    await chrome.storage.sync.set(updateData);
-
-    // DOM move instead of full reload
-    const tabList = document.getElementById('tab-list');
-    const draggedEl = tabList.querySelector(`[data-tab-id="${String(draggedId)}"]`);
-    const targetEl = tabList.querySelector(`[data-tab-id="${String(targetId)}"]`);
-    if (draggedEl && targetEl) {
-        if (draggedIndex < targetIndex) {
-            // Moving down: insert after target
-            targetEl.parentNode.insertBefore(draggedEl, targetEl.nextSibling);
-        } else {
-            // Moving up: insert before target
-            targetEl.parentNode.insertBefore(draggedEl, targetEl);
-        }
-    }
 }

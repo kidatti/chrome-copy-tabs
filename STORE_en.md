@@ -33,6 +33,16 @@ You can save reference articles and pass the list to tools like Notebook LM.
 
 # Change Log
 
+## v.0.9.7
+
+- Redesigned the popup around quick save/copy actions, with collapsible export and recently saved sections
+- Reorganized the saved page manager with title/URL search and sorting
+- Added multi-selection for copying, moving, and deleting pages together
+- Copy URLs, titles and URLs, or Markdown links in the displayed order
+- Protect locked pages from deletion and undo the latest page deletion within 10 seconds
+- Slimmed the navigation bar and placed settings on the CopyTabs header row
+- Improved light/dark appearance, narrow layouts, and keyboard accessibility
+
 ## v.0.9.6
 
 - Minor design adjustments

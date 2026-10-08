@@ -1,65 +1,76 @@
-# CopyTabs - Tab Management Extension
+# CopyTabs — タブを保存・整理するChrome拡張機能
 
-[日本語版はこちら](#copytabs---タブ管理拡張機能)
-
-CopyTabs is a Chrome extension that makes it easy to manage browser tabs. It provides tab copying, marking, and content export features.
-
-## Main Features
-
-### Tab Copying
-- Copy title and URL of current tab or all tabs
-- Export current tab content in multiple formats:
-  - HTML: Full page HTML
-  - HTML (Article): Clean article content using Readability
-  - Markdown: Article content in Markdown format
-
-### Tab Marking
-- Mark current tab or all tabs (duplicate URLs excluded)
-- View and manage marked tabs:
-  - Latest 5 tabs shown in popup
-  - Click to open, delete button for removal
-  - View all marked tabs in separate window
-
-### Settings & Sync
-- Language: Japanese/English/Auto
-- Storage usage display
-- Sync across devices via Google account
-
-## Notes
-
-- Sync storage limit: ~100KB
-- Marked tabs sync with Google account
-
----
-
-# CopyTabs - タブ管理拡張機能
-
-[English version](#copytabs---tab-management-extension)
-
-CopyTabsは、ブラウザのタブを簡単に管理できるChrome拡張機能です。タブのコピー、マーク、コンテンツのエクスポート機能を提供します。
+CopyTabsは、気になったページをフォルダに保存し、必要な情報を検索・コピー・書き出しできる拡張機能です。
 
 ## 主な機能
 
-### タブのコピー機能
-- 現在のタブまたは全タブのタイトルとURLをコピー
-- 現在のタブのコンテンツを複数の形式でエクスポート:
-  - HTML: ページ全体のHTML
-  - HTML (Article): Readabilityを使用した記事本文
-  - Markdown: 記事本文をMarkdown形式で
+### ページの保存と整理
 
-### タブのマーク機能
-- 現在のタブまたは全タブをマーク（重複URLは除外）
-- マークしたタブの管理:
-  - ポップアップに最新5件を表示
-  - クリックで開く、削除ボタンで削除
-  - 別ウィンドウで全タブを表示
+- 現在のタブ、または開いているすべてのタブを保存（重複URLは除外）
+- フォルダで分類し、最大3階層のフォルダ構造を作成
+- ドラッグ＆ドロップでフォルダやページを移動
+- クイック操作のポップアップから保存・コピーをすぐに操作
+- 書き出しと直近5件の保存ページは、折りたたみを開いて表示
+- 管理画面でタイトル・URLを検索し、全フォルダまたは選択中のフォルダから絞り込み
+- 保存日時・タイトルで並び替え、フォルダ内では手動の並び替えにも対応
+- 複数選択してまとめてコピー・移動・削除
+- ページのタイトル・URLを編集
+- ロックしたページを削除から保護し、直前のページ削除を10秒以内に取り消し
 
-### 設定と同期
-- 言語: 日本語/英語/自動
-- ストレージ使用状況の表示
-- Googleアカウントによるデバイス間同期
+### コピーと書き出し
 
-## 注意事項
+- 現在のタブ、または開いているすべてのタブのタイトルとURLをコピー
+- 保存したページは、URLのみ・タイトル＋URL・Markdownリンクから形式を選んでコピー
+- 選択したページがある場合は選択分を、選択がない場合は表示中のページを表示順にコピー
+- 現在のページをHTML・記事本文のHTML・Markdownとして書き出し
+- 記事本文の抽出にはReadabilityを使用
 
-- 同期ストレージ制限: 約100KB
-- マークしたタブはGoogleアカウントに紐づいて同期 
+### 表示と設定
+
+- 管理画面はライト／ダークモード、狭い画面、キーボード操作に対応
+- 細いナビゲーションバーのCopyTabsと同じ行に設定ボタンを配置
+- 日本語・英語・自動の表示言語を選択
+- 設定画面で保存データの使用量を確認、データの書き出し・読み込みにも対応
+- Chromeの同期が有効な環境で、保存データをデバイス間で同期
+
+## 利用上の注意
+
+保存先はChromeの同期ストレージです。全体で約100KBの容量制限があるため、保存数とタイトル・URLの長さによって保存できる件数が変わります。記事の書き出し結果はページ構造によって異なります。削除の取り消しは、管理画面を開いたままの状態で直前のページ削除に対して利用できます。
+
+## v.0.9.7の変更
+
+ポップアップをクイック操作の構成に変更しました。管理画面の検索・並び替え・複数選択とコピー形式を追加し、削除保護と取り消し、ナビゲーションバー、画面サイズやキーボードへの対応を改善しました。
+
+機能の変更は[ストア向け説明文の更新履歴](STORE_ja.md#変更履歴)を参照してください。
+
+## 開発環境で使う
+
+Node.js 18.17以降と、配布ZIPの作成には`zip`コマンドを使用します。
+
+1. `make sync-version`でバージョンを反映します。
+2. Chromeで`chrome://extensions/`を開き、デベロッパーモードを有効にします。
+3. 「パッケージ化されていない拡張機能を読み込む」で`src/`を選択します。
+4. 変更後は拡張機能を再読み込みし、ポップアップや管理画面を開き直します。
+
+## バージョンとビルド
+
+バージョンの基準はルートの[.version](.version)です。値は`0.9.7`のように記述してください。`src/manifest.json`のバージョンは、以下の同期・ビルド・検証コマンドで自動的に更新されます。拡張機能の表示と配布ZIPの名前もこの値に揃います。
+
+```sh
+make sync-version  # .versionをマニフェストに反映
+make version       # 反映して現在のバージョンを表示
+make test          # 管理画面とバージョン管理の回帰テスト
+make validate      # バージョンを反映してマニフェストを検証
+make build         # dist/copytabs-v0.9.7.zipを作成
+make dev           # dist/copytabs-v0.9.7/に開発用ビルドを作成
+```
+
+ビルドは同じバージョンの成果物を置き換え、別バージョンの成果物を保持します。出力先は`make build DIST_DIR=/任意のパス`で変更できます。`make clean`は出力先全体を削除します。
+
+ポップアップの自動サイズ調整は、PlaywrightとChromeまたはChromiumがある環境で`make test-popup`を実行して確認できます。インストール済みのChromeを使う場合は`CHROME_PATH`に実行ファイルのパスを指定してください。Playwrightを別の場所に配置している場合は`NODE_PATH`をモジュールのディレクトリに設定してください。
+
+バージョンアップ時は`.version`を更新し、ストア向け説明文の`STORE_ja.md`と`STORE_en.md`に利用者向けの更新履歴を追加してから、検証・ビルドを実行してください。
+
+## ストア掲載用画像
+
+機能紹介画像とプロモーション画像を[日本語版](store/v0.9.7/ja/)・[英語版](store/v0.9.7/en/)に分けて用意しています。用途、掲載順、再生成方法は[掲載画像の説明](store/README.md)を参照してください。

@@ -1,20 +1,23 @@
-// Function to update UI elements with current language
+// Refresh quick actions while retaining the current details disclosure state.
 function updateUI() {
-    // Update section titles
-    document.getElementById('copy-section-title').textContent = i18n.getString('copyTitleUrl');
-    document.getElementById('export-section-title').textContent = i18n.getString('exportTabContent');
-
-    // Update button texts (simplified without icons)
-    document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
+    document.documentElement.lang = getUserLanguage();
+    document.getElementById('manage-label').textContent = i18n.getString('popupManage');
+    document.getElementById('save-folder-label').textContent = i18n.getString('popupSaveFolder');
+    document.getElementById('copy-section-title').textContent = i18n.getString('popupCopyTitleUrl');
+    document.getElementById('export-section-title').textContent = i18n.getString('popupExport');
+    document.getElementById('exportHtmlArticleCurrentTab').textContent = i18n.getString('popupArticleHtml');
+    document.getElementById('copyCurrentTab').textContent = i18n.getString('popupCopyCurrent');
     document.getElementById('copyAllTabs').textContent = i18n.getString('copyAllTabs');
-    document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+    document.getElementById('markCurrentTab').textContent = i18n.getString('popupSaveCurrent');
     document.getElementById('markAllTabs').textContent = i18n.getString('markAllTabs');
+    const settings = document.getElementById('settingsIcon');
+    settings.title = i18n.getString('settingsLink');
+    settings.setAttribute('aria-label', settings.title);
+    updateRecentCount(document.querySelectorAll('.tab-item').length);
+}
 
-    // Update other UI elements as needed
-    const settingsLink = document.querySelector('.settings-link');
-    if (settingsLink) {
-        settingsLink.textContent = i18n.getString('settingsLink');
-    }
+function updateRecentCount(count) {
+    document.getElementById('recent-section-title').textContent = i18n.getString('popupRecent').replace('{count}', count);
 }
 
 document.addEventListener("DOMContentLoaded", async function(){
@@ -25,7 +28,7 @@ document.addEventListener("DOMContentLoaded", async function(){
     if (isLocalDevelopment) {
         const devBadge = document.getElementById('devBadge');
         if (devBadge) {
-            devBadge.style.display = 'block';
+            devBadge.hidden = false;
         }
     }
 
@@ -60,7 +63,9 @@ document.addEventListener("DOMContentLoaded", async function(){
 
         // Update current tab info display
         document.getElementById('current-tab-title').textContent = activeTabs[0].title;
+        document.getElementById('current-tab-title').title = activeTabs[0].title;
         document.getElementById('current-tab-url').textContent = activeTabs[0].url;
+        document.getElementById('current-tab-url').title = activeTabs[0].url;
     }
 
     // Button texts are now updated in updateUI() function
@@ -74,19 +79,16 @@ document.addEventListener("DOMContentLoaded", async function(){
     // Initialize settings icon
     initializeSettingsIcon();
 
-    // Initialize folder UI texts
-    initializeFolderUI();
-
-    // Load folders for popup
-    loadFoldersForPopup();
-    loadDefaultFolder();
+    // Populate options before restoring the previous save destination.
+    await loadFoldersForPopup();
+    await loadDefaultFolder();
 
     // Add folder select event listener to save last selected folder
     document.getElementById('folder-select').addEventListener('change', saveLastSelectedFolder);
 });
 
 // Listen for storage changes to update language and folders
-chrome.storage.onChanged.addListener(function(changes, namespace) {
+chrome.storage.onChanged.addListener(async function(changes, namespace) {
     if (namespace === 'sync' && changes.language) {
         console.log('Popup: Language setting changed to:', changes.language.newValue);
 
@@ -104,9 +106,10 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
         // Update UI with new language
         updateUI();
         // Reload other UI elements
-        initializeFolderUI();
-        loadFoldersForPopup();
-        loadDefaultFolder();
+        await loadFoldersForPopup();
+        await loadDefaultFolder();
+        count();
+        updateViewAllButton();
 
         // Update settings icon tooltip
         const settingsIcon = document.getElementById('settingsIcon');
@@ -119,8 +122,9 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
     }
 
     // Listen for folder changes and update folder select
-    if (namespace === 'sync' && changes.folders) {
-        loadFoldersForPopup();
+    if (namespace === 'sync' && (changes.folders || changes.uncategorizedName)) {
+        await loadFoldersForPopup();
+        await loadDefaultFolder();
     }
 });
 
@@ -139,7 +143,7 @@ async function getActiveTab() {
         copy();
         document.getElementById('copyCurrentTab').textContent = i18n.getString('copied');
         setTimeout(() => {
-            document.getElementById('copyCurrentTab').textContent = i18n.getString('copyThisTab');
+            document.getElementById('copyCurrentTab').textContent = i18n.getString('popupCopyCurrent');
         }, 2000);
     }
     return tabs;
@@ -160,9 +164,11 @@ async function getAllTabs() {
 }
 
 function copy() {
+    const focusedElement = document.activeElement;
     const copyText = document.querySelector("#input");
     copyText.select();
     document.execCommand("copy");
+    focusedElement?.focus({ preventScroll: true });
 }
 
 async function markCurrentTab() {
@@ -170,7 +176,7 @@ async function markCurrentTab() {
     if (tabs.length === 0) {
         document.getElementById('markCurrentTab').textContent = i18n.getString('noTabs');
         setTimeout(() => {
-            document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+            document.getElementById('markCurrentTab').textContent = i18n.getString('popupSaveCurrent');
         }, 2000);
         return;
     }
@@ -190,7 +196,7 @@ async function markCurrentTab() {
         if (isDuplicate) {
             document.getElementById('markCurrentTab').textContent = i18n.getString('alreadyMarked');
             setTimeout(() => {
-                document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+                document.getElementById('markCurrentTab').textContent = i18n.getString('popupSaveCurrent');
             }, 2000);
             return;
         }
@@ -238,7 +244,7 @@ async function addNewTab(chromeTab) {
 
     document.getElementById('markCurrentTab').textContent = i18n.getString('marked');
     setTimeout(() => {
-        document.getElementById('markCurrentTab').textContent = i18n.getString('markThisTab');
+        document.getElementById('markCurrentTab').textContent = i18n.getString('popupSaveCurrent');
     }, 2000);
 }
 
@@ -301,6 +307,7 @@ async function loadMarkedTabs() {
 
     if (dataKeys.length === 0) {
         tabList.innerHTML = '<div class="no-tabs">' + i18n.getString('noMarkedTabs') + '</div>';
+        updateRecentCount(0);
         updateViewAllButton();
         return;
     }
@@ -324,9 +331,10 @@ async function loadMarkedTabs() {
         const tabElement = document.createElement('div');
         tabElement.className = 'tab-item';
 
-        const tabInfo = document.createElement('div');
+        const tabInfo = document.createElement('a');
         tabInfo.className = 'tab-info';
-        tabInfo.setAttribute('data-url', tab.url);
+        tabInfo.href = tab.url;
+        tabInfo.title = tab.title;
 
         const tabTitle = document.createElement('div');
         tabTitle.className = 'tab-title';
@@ -340,7 +348,9 @@ async function loadMarkedTabs() {
         tabInfo.appendChild(tabUrl);
 
         const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
         deleteBtn.className = 'delete-btn';
+        deleteBtn.setAttribute('aria-label', i18n.getString('deleteButton') + ': ' + tab.title);
         deleteBtn.setAttribute('data-id', String(tab.id));
         if (tab.locked) deleteBtn.style.display = 'none';
         deleteBtn.textContent = i18n.getString('deleteButton');
@@ -349,9 +359,9 @@ async function loadMarkedTabs() {
         tabElement.appendChild(deleteBtn);
 
         // Add click event to open the tab
-        tabInfo.addEventListener('click', function() {
-            const url = this.getAttribute('data-url');
-            chrome.tabs.create({ url: url });
+        tabInfo.addEventListener('click', function(event) {
+            event.preventDefault();
+            chrome.tabs.create({ url: tab.url });
         });
 
         // Add cursor pointer style to tab info
@@ -366,6 +376,7 @@ async function loadMarkedTabs() {
         tabList.appendChild(tabElement);
     });
 
+    updateRecentCount(tabsToShow.length);
     updateViewAllButton();
 }
 
@@ -376,7 +387,7 @@ async function deleteTab(tabId) {
     const tabsData = await chrome.storage.sync.get(dataKeys);
     const keyToRemove = dataKeys.find(key => tabsData[key] && String(tabsData[key].id) === String(tabId));
 
-    if (!keyToRemove) return;
+    if (!keyToRemove || tabsData[keyToRemove].locked) return;
 
     const updatedDataKeys = dataKeys.filter(key => key !== keyToRemove);
 
@@ -398,11 +409,12 @@ async function updateViewAllButton() {
     }
 
     if (viewAllContainer) {
+        viewAllContainer.setAttribute('aria-label', i18n.getString('popupManageCount').replace('{count}', count));
         if (count > 0) {
-            viewAllContainer.title = `View All Tabs (${count})`;
+            viewAllContainer.title = i18n.getString('popupManageCount').replace('{count}', count);
             viewAllContainer.style.opacity = '1';
         } else {
-            viewAllContainer.title = 'View All Tabs';
+            viewAllContainer.title = i18n.getString('popupManageCount').replace('{count}', count);
             viewAllContainer.style.opacity = '0.6';
         }
     }
@@ -897,11 +909,6 @@ function extractAndConvertToMarkdown() {
     }
 }
 
-// Initialize folder UI texts
-function initializeFolderUI() {
-    document.getElementById('uncategorized-option').textContent = i18n.getString('uncategorized');
-}
-
 // Load folders for popup (with tree hierarchy)
 async function loadFoldersForPopup() {
     const result = await chrome.storage.sync.get(['folders', 'uncategorizedName']);
@@ -909,8 +916,11 @@ async function loadFoldersForPopup() {
     const uncategorizedName = result.uncategorizedName || i18n.getString('uncategorized');
     const folderSelect = document.getElementById('folder-select');
 
-    // Clear existing options except the first one
-    folderSelect.innerHTML = `<option value="null">${uncategorizedName}</option>`;
+    // Render the custom uncategorized name as text, then append folder options.
+    const uncategorized = document.createElement('option');
+    uncategorized.value = 'null';
+    uncategorized.textContent = uncategorizedName;
+    folderSelect.replaceChildren(uncategorized);
 
     // Build tree and add options with indentation
     const tree = buildFolderTreeForPopup(folders);
@@ -952,7 +962,8 @@ async function loadDefaultFolder() {
     const folderSelect = document.getElementById('folder-select');
 
     if (lastSelectedFolder !== undefined) {
-        folderSelect.value = lastSelectedFolder || 'null';
+        const exists = [...folderSelect.options].some(option => option.value === lastSelectedFolder);
+        folderSelect.value = exists ? lastSelectedFolder : 'null';
     }
 }
 

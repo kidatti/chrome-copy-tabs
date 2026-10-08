@@ -2,388 +2,61 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <style>
-        body {
-            width: 600px;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            margin: 0;
-        }
-        .button-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            background: white;
-        }
-        .section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #e5e5e5;
-        }
-        .section-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-
-        /* Primary save section */
-        .save-section {
-            background: #fff;
-            padding: 16px 20px;
-            border-bottom: 2px solid #e5e5e5;
-        }
-
-        /* Main action row - folder select + save button */
-        .main-action-row {
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-
-        .folder-select-main {
-            flex: 1;
-            min-width: 0;
-            max-width: 360px;
-        }
-        .folder-select-main select {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            background: white;
-            cursor: pointer;
-        }
-        .folder-select-main select:focus {
-            outline: none;
-            border-color: #4a90e2;
-        }
-
-        .main-action-row .btn-primary {
-            flex-shrink: 0;
-            min-width: 180px;
-            max-width: 180px;
-        }
-
-        /* Current tab info display */
-        .current-tab-info {
-            margin-top: 10px;
-            padding: 10px 12px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-            min-width: 0;
-        }
-        .current-tab-title {
-            font-size: 13px;
-            color: #333;
-            font-weight: 500;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .current-tab-url {
-            font-size: 11px;
-            color: #6c757d;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 8px;
-            justify-content: space-between;
-        }
-        .button-group button {
-            flex: 1;
-        }
-        button {
-            padding: 12px 16px;
-            background: #4a90e2;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            min-height: 44px;
-        }
-        button:hover {
-            background: #357abd;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-
-        /* Primary button */
-        .btn-primary {
-            background: #4a90e2;
-            font-size: 16px;
-            min-height: 48px;
-            font-weight: 600;
-        }
-        .btn-primary:hover {
-            background: #357abd;
-        }
-
-        /* Secondary button */
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #666;
-            font-size: 14px;
-            min-height: 40px;
-            width: 100%;
-        }
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
-        /* Compact sections */
-        .compact-section {
-            background: #fafafa;
-        }
-        .compact-section .section-title {
-            font-size: 11px;
-        }
-
-        #message {
-            padding: 10px 16px;
-            text-align: center;
-            display: none;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .hidden {
-            position: absolute;
-            top: -9999px;
-            left: -9999px;
-        }
-
-        /* Header styles */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 16px;
-            background: white;
-            border-bottom: 1px solid #e5e5e5;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .dev-badge {
-            background: #ff6b6b;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        .settings-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .settings-icon:hover {
-            background: rgba(0, 0, 0, 0.06);
-        }
-        .settings-icon img {
-            width: 24px;
-            height: 24px;
-            opacity: 0.6;
-            transition: all 0.3s ease;
-        }
-        .settings-icon:hover img {
-            transform: rotate(45deg);
-            opacity: 0.9;
-        }
-        .view-all-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: #f5f5f5;
-            border-radius: 6px;
-            padding: 6px 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .view-all-container:hover {
-            background: #e5e5e5;
-        }
-        .view-all-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .view-all-icon img {
-            width: 24px;
-            height: 24px;
-        }
-        .tab-count {
-            color: #333;
-            font-size: 13px;
-            font-weight: 600;
-            min-width: 18px;
-            text-align: center;
-        }
-
-        /* Tab list styling */
-        .tab-list {
-            max-height: 300px;
-            overflow-y: auto;
-            padding: 12px 16px;
-            background: white;
-        }
-        .tab-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            background-color: #f8f9fa;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            transition: all 0.2s ease;
-        }
-        .tab-item:hover {
-            background-color: #e9ecef;
-            border-color: #ced4da;
-        }
-        .tab-info {
-            flex: 1;
-            min-width: 0;
-            cursor: pointer;
-        }
-        .tab-title {
-            font-size: 13px;
-            color: #333;
-            margin-bottom: 4px;
-            font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .tab-url {
-            font-size: 11px;
-            color: #6c757d;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .delete-btn {
-            flex-shrink: 0;
-            padding: 6px 12px;
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            min-height: auto;
-            transition: all 0.2s ease;
-        }
-        .delete-btn:hover {
-            background-color: #c82333;
-            transform: none;
-        }
-        .no-tabs {
-            text-align: center;
-            color: #6c757d;
-            padding: 20px;
-            font-size: 13px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CopyTabs</title>
+    <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <div class="settings-icon" id="settingsIcon" title="Settings">
-                <img src="images/settings.svg" alt="Settings">
+    <header class="popup-header">
+        <span class="brand">CopyTabs</span>
+        <span class="dev-badge" id="devBadge" hidden>DEV</span>
+        <button type="button" class="manage-button" id="viewAllTabsIcon">
+            <img src="images/folder.svg" alt="">
+            <span id="manage-label"></span><span aria-hidden="true">·</span><span id="tabCount">0</span>
+        </button>
+        <button type="button" class="settings-icon" id="settingsIcon">
+            <img src="images/settings.svg" alt="">
+        </button>
+    </header>
+    <main>
+        <section class="section save-section">
+            <div class="current-tab-info">
+                <div class="current-tab-title" id="current-tab-title"></div>
+                <div class="current-tab-url" id="current-tab-url"></div>
             </div>
-            <div class="dev-badge" id="devBadge" style="display: none;">DEV</div>
-        </div>
-        <div class="view-all-container" id="viewAllTabsIcon" title="View All Tabs">
-            <div class="view-all-icon">
-                <img src="images/folder.svg" alt="All Tabs">
+            <label class="section-label" id="save-folder-label" for="folder-select"></label>
+            <div class="action-row save-row">
+                <select id="folder-select"><option value="null"></option></select>
+                <button type="button" id="markCurrentTab" class="primary"></button>
             </div>
-            <div class="tab-count" id="tabCount">0</div>
-        </div>
-    </div>
-    <div id="message"></div>
-    <div class="button-container">
-        <!-- Primary: Save This Tab Section -->
-        <div class="section save-section">
-            <div class="main-action-row">
-                <div class="folder-select-main">
-                    <select id="folder-select">
-                        <option value="null" id="uncategorized-option">Uncategorized</option>
-                    </select>
-                    <div class="current-tab-info">
-                        <div class="current-tab-title" id="current-tab-title">Loading...</div>
-                        <div class="current-tab-url" id="current-tab-url">Loading...</div>
-                    </div>
-                </div>
-                <button id="markCurrentTab" class="btn-primary">Save This Tab</button>
+            <button type="button" id="markAllTabs" class="secondary wide"></button>
+        </section>
+        <section class="section" aria-labelledby="copy-section-title">
+            <h2 class="section-label" id="copy-section-title"></h2>
+            <div class="action-row">
+                <button type="button" id="copyCurrentTab"></button>
+                <button type="button" id="copyAllTabs"></button>
             </div>
-            <button id="markAllTabs" class="btn-secondary">Save All Tabs</button>
-        </div>
-
-        <!-- Secondary: Copy Section -->
-        <div class="section compact-section">
-            <div class="section-title" id="copy-section-title">Copy Title & URL</div>
-            <div class="button-group">
-                <button id="copyCurrentTab">This Tab</button>
-                <button id="copyAllTabs">All Tabs</button>
+        </section>
+        <details class="details-section" id="export-details">
+            <summary id="export-section-title"></summary>
+            <div class="action-row export-actions">
+                <button type="button" id="exportHtmlCurrentTab">HTML</button>
+                <button type="button" id="exportHtmlArticleCurrentTab"></button>
+                <button type="button" id="exportMarkdownCurrentTab">Markdown</button>
             </div>
-        </div>
-
-        <!-- Secondary: Export Section -->
-        <div class="section compact-section">
-            <div class="section-title" id="export-section-title">Export Tab Content</div>
-            <div class="button-group">
-                <button id="exportHtmlCurrentTab">HTML</button>
-                <button id="exportHtmlArticleCurrentTab">Article</button>
-                <button id="exportMarkdownCurrentTab">Markdown</button>
-            </div>
-        </div>
-    </div>
-    <div id="title" class="hidden"></div>
-    <div id="url" class="hidden"></div>
-    <textarea id="input" class="hidden"></textarea>
-    <div id="tab-list" class="tab-list"></div>
-    <script type="text/javascript" src="i18n.js"></script>
-    <script type="text/javascript" src="readability.js"></script>
-    <script type="text/javascript" src="contents.js"></script>
+        </details>
+        <details class="details-section" id="recent-details">
+            <summary id="recent-section-title"></summary>
+            <div id="tab-list" class="tab-list"></div>
+        </details>
+        <div id="message" role="status" aria-live="polite"></div>
+    </main>
+    <div id="title" hidden></div>
+    <div id="url" hidden></div>
+    <textarea id="input" class="copy-input" tabindex="-1" aria-hidden="true"></textarea>
+    <script src="i18n.js"></script>
+    <script src="readability.js"></script>
+    <script src="contents.js"></script>
 </body>
 </html>

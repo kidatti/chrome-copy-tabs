@@ -24,7 +24,7 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 ### コア拡張機能ファイル
 - `src/manifest.json`: 拡張機能設定 (Manifest V3)
 - `src/popup.html`: メインポップアップインターフェース
-- `src/popup.js`: ポップアップ機能の実装
+- `src/popup.css`: クイック操作ポップアップのスタイル
 - `src/background.js`: バックグラウンド処理
 - `src/content.js`: ページ操作用コンテンツスクリプト
 
@@ -33,6 +33,8 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 - `src/options.js`: 設定機能
 - `src/all_tabs.html`: 全マークタブ表示ページ（2カラムレイアウト）
 - `src/all_tabs.js`: 全タブ管理とフォルダ機能
+- `src/all_tabs.css`: 管理画面のスタイル
+- `src/tab_view.js`: 検索・並び替え・一括操作の純粋関数
 
 ### ユーティリティ
 - `src/html_utils.js`: HTML操作ユーティリティ
@@ -82,7 +84,7 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 
 ### UI/UX設計
 - **all_tabs.html**: 左側にフォルダツリー、右側にタブリスト
-- **popup.html**: Mark Tabsセクション右側にフォルダ選択UI（階層インデント表示）
+- **popup.html**: 幅400pxのクイック操作画面。ページ情報、保存先と保存、コピーを順に配置。書き出し・最近の保存ページは折りたたみ。管理と設定は同じヘッダー行。
 - **フォルダ操作**: 作成・削除・名前変更・サブフォルダ追加をサポート
 - **ドラッグ&ドロップ**:
   - 上/中/下のドロップ位置判定でビジュアルフィードバック
@@ -109,6 +111,8 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 - `make release` - リリース用パッケージ作成と情報表示
 - `make clean` - ビルド成果物をクリーンアップ
 - `make validate` - 拡張機能ファイルの検証
+- `make sync-version` - `.version`をマニフェストに反映
+- `make test` - 管理画面とバージョンの回帰テスト
 - `make version` - 現在のバージョンを表示
 - `make list-files` - パッケージに含まれるファイル一覧
 - `make help` - ヘルプ表示
@@ -117,15 +121,16 @@ CopyTabsは、効率的なタブ管理のためのChrome拡張機能です。タ
 ```bash
 # リリース用パッケージ作成
 make release
-# → dist/copytabs-v0.6.1.zip が作成される
+# → dist/copytabs-v0.9.7.zip が作成される
 ```
 
 ### ファイル構成
 - ビルド出力: `dist/` ディレクトリ
-- パッケージ名: `copytabs-v{VERSION}.zip` (manifest.jsonのversionを使用)
+- パッケージ名: `copytabs-v{VERSION}.zip` (.versionの値を使用)
 - Chrome Web Store用zipファイルを自動生成
 
 ### バージョンアップ時の更新対象
-- `src/manifest.json`: `version` フィールドを更新
-- `COPYTABS_ja.md`: 日本語の更新履歴を追加
-- `COPYTABS_en.md`: 英語の更新履歴を追加
+- `.version`: バージョンを更新し、`make sync-version`で`src/manifest.json`に反映
+- ビルド・開発用ビルド・検証の実行時にも自動的に反映（既存の別バージョンの成果物は保持）
+- `STORE_ja.md`: 日本語のストア向け説明文。利用者に関係する更新履歴を追加
+- `STORE_en.md`: 英語のストア向け説明文。利用者に関係する更新履歴を追加
